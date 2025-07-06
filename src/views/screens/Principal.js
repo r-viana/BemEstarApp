@@ -1,21 +1,70 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { cores } from '../../utils/Cores';
-
+import { auth } from '../../services/FirebaseConfig';
+import { signOut } from 'firebase/auth';
 
 export default function Principal({ navigation }) {
-  const fazerLogout = () => {
+  const [nomeUsuario, setNomeUsuario] = useState('');
+  const [diasConsecutivos, setDiasConsecutivos] = useState(0);
+  const [recordeDias, setRecordeDias] = useState(0);
+
+  useEffect(() => {
+    carregarDadosUsuario();
+  }, []);
+
+  const carregarDadosUsuario = async () => {
+    try {
+      // Por enquanto, vamos usar dados temporários
+      // Depois vamos buscar do Firestore
+      const usuario = auth.currentUser;
+      if (usuario) {
+        // Usar displayName se existir, senão usar parte do email
+        const nome = usuario.displayName || usuario.email.split('@')[0];
+        setNomeUsuario(nome);
+        
+        // Dados temporários para teste
+        setDiasConsecutivos(17);
+        setRecordeDias(45);
+      }
+    } catch (error) {
+      console.log('Erro ao carregar dados:', error);
+    }
+  };
+
+  const obterMensagemMotivacional = () => {
+    const porcentagem = (diasConsecutivos / recordeDias) * 100;
+    
+    if (diasConsecutivos >= recordeDias) {
+      return "Parabéns! Novo recorde!";
+    } else if (porcentagem >= 80) {
+      return "Está quase lá!";
+    } else if (porcentagem >= 50) {
+      return "Você está indo bem!";
+    } else {
+      return "Vamos lá!";
+    }
+  };
+
+  const fazerLogout = async () => {
     Alert.alert(
-      'Logout',
+      'Sair',
       'Tem certeza que deseja sair?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
           text: 'Sair', 
           style: 'destructive',
-          onPress: () => {
-            // Aqui implementaremos a lógica de logout
-            console.log('Fazendo logout...');
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível sair');
+            }
           }
         }
       ]
@@ -24,32 +73,87 @@ export default function Principal({ navigation }) {
 
   return (
     <View style={estilos.container}>
-      <Text style={estilos.titulo}>Bem-vindo ao Bem Estar App!</Text>
-      
-      <View style={estilos.conteudo}>
-        <Text style={estilos.subtitulo}>Painel Principal</Text>
-        
-        <View style={estilos.cartao}>
-          <Text style={estilos.textoCartao}>
-            Você está logado com sucesso!
-          </Text>
-          <Text style={estilos.descricaoCartao}>
-            Aqui vamos adicionar as funcionalidades do seu app.
-          </Text>
-        </View>
-        
-        <TouchableOpacity style={estilos.botaoSecundario}>
-          <Text style={estilos.textoBotaoSecundario}>Meu Perfil</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={estilos.botaoSecundario}>
-          <Text style={estilos.textoBotaoSecundario}>Configurações</Text>
+      {/* Header */}
+      <View style={estilos.header}>
+        <Text style={estilos.tituloApp}>Bem Estar App</Text>
+        <TouchableOpacity 
+          style={estilos.botaoPerfil}
+          onPress={() => navigation.navigate('Perfil')}
+        >
+          <Text style={estilos.iconePerfilTexto}>👤</Text>
         </TouchableOpacity>
       </View>
-      
-      <TouchableOpacity style={estilos.botaoLogout} onPress={fazerLogout}>
-        <Text style={estilos.textoBotaoLogout}>Sair</Text>
-      </TouchableOpacity>
+
+      {/* Área de boas-vindas */}
+      <View style={estilos.areaBemVindo}>
+        <Text style={estilos.textoBoasVindas}>
+          Olá, {nomeUsuario}!
+        </Text>
+        <Text style={estilos.textoSubtitulo}>
+          Bem-vindo de volta!
+        </Text>
+        
+        <View style={estilos.areaEstatisticas}>
+          <Text style={estilos.textoStreak}>
+            🔥 Você está a {diasConsecutivos} dias consecutivos
+          </Text>
+          <Text style={estilos.textoStreak}>
+            realizando atividades
+          </Text>
+          
+          <Text style={estilos.textoRecorde}>
+            🏆 Seu recorde atual é de {recordeDias} dias!
+          </Text>
+          <Text style={estilos.textoMotivacional}>
+            {obterMensagemMotivacional()}
+          </Text>
+        </View>
+      </View>
+
+      {/* Botões principais */}
+      <View style={estilos.areaBotoes}>
+        <TouchableOpacity 
+          style={estilos.botaoMenu}
+          onPress={() => navigation.navigate('HealthTracker')}
+        >
+          <Text style={estilos.textoBotaoMenu}>✅ Health Tracker</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={estilos.botaoMenu}
+          onPress={() => navigation.navigate('RegistroAtividades')}
+        >
+          <Text style={estilos.textoBotaoMenu}>📝 Registro de Atividades</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={estilos.botaoMenu}
+          onPress={() => navigation.navigate('Perfil')}
+        >
+          <Text style={estilos.textoBotaoMenu}>👤 Meu Perfil</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={estilos.botaoMenu}
+          onPress={() => navigation.navigate('Configuracoes')}
+        >
+          <Text style={estilos.textoBotaoMenu}>⚙️ Configurações</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={estilos.botaoMenu}
+          onPress={() => navigation.navigate('Estatisticas')}
+        >
+          <Text style={estilos.textoBotaoMenu}>📊 Estatísticas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={estilos.botaoSair}
+          onPress={fazerLogout}
+        >
+          <Text style={estilos.textoBotaoSair}>🚪 Sair</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -58,70 +162,107 @@ const estilos = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: cores.fundo,
-    padding: 20,
   },
-  titulo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 50,
-    marginBottom: 30,
-    color: cores.texto,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: cores.primaria,
   },
-  conteudo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  subtitulo: {
+  tituloApp: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: cores.texto,
+    fontWeight: 'bold',
+    color: cores.branco,
   },
-  cartao: {
-    backgroundColor: cores.fundoCartao,
+  botaoPerfil: {
+    backgroundColor: cores.branco,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconePerfilTexto: {
+    fontSize: 18,
+  },
+  areaBemVindo: {
     padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
+    backgroundColor: cores.fundoCartao,
+    margin: 20,
+    borderRadius: 12,
     shadowColor: cores.sombra,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: cores.sombraOpacidade,
     shadowRadius: 4,
     elevation: 3,
   },
-  textoCartao: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
+  textoBoasVindas: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: cores.texto,
+    marginBottom: 5,
   },
-  descricaoCartao: {
+  textoSubtitulo: {
     fontSize: 16,
     color: cores.textoSecundario,
-    lineHeight: 22,
-  },
-  botaoSecundario: {
-    backgroundColor: cores.primaria,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  textoBotaoSecundario: {
-    color: cores.branco,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  botaoLogout: {
-    backgroundColor: cores.perigo,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
     marginBottom: 20,
   },
-  textoBotaoLogout: {
-    color: cores.branco,
+  areaEstatisticas: {
+    alignItems: 'center',
+  },
+  textoStreak: {
     fontSize: 16,
+    color: cores.texto,
+    textAlign: 'center',
+  },
+  textoRecorde: {
+    fontSize: 16,
+    color: cores.texto,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  textoMotivacional: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: cores.primaria,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  areaBotoes: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  botaoMenu: {
+    backgroundColor: cores.fundoCartao,
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: cores.sombra,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: cores.sombraOpacidade,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  textoBotaoMenu: {
+    fontSize: 18,
+    color: cores.texto,
+    fontWeight: '600',
+  },
+  botaoSair: {
+    backgroundColor: cores.perigo,
+    padding: 18,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  textoBotaoSair: {
+    fontSize: 18,
+    color: cores.branco,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
+

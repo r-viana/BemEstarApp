@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AppBemEstar",
-    "slug": "AppBemEstar",
+    "name": "BemEstarApp",
+    "slug": "bem-estar-app",
     "version": "1.0.0",
     "sdkVersion": "49.0.0",
     "orientation": "portrait",
@@ -19,7 +19,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.bemestarapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"

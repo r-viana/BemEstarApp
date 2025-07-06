@@ -36,6 +36,17 @@ const fazerLogin = async () => {
           { text: 'OK' }
         ]
       );
+      const reenviarEmailVerificacao = async (usuario) => {
+  try {
+    await sendEmailVerification(usuario);
+    Alert.alert('Sucesso', 'Email de verificação enviado novamente!');
+  } catch (error) {
+    console.log('Erro ao reenviar email:', error);
+    Alert.alert('Erro', 'Não foi possível reenviar o email de verificação');
+  }
+};
+
+
       return;
     }
     
@@ -68,6 +79,8 @@ const fazerLogin = async () => {
     Alert.alert('Erro', mensagemErro);
   }
 };
+
+
 
 
 

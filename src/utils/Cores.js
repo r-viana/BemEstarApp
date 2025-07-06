@@ -21,9 +21,9 @@ export const cores = {
   
   // Estados
   sucesso: '#8dd4af',         // Verde sucesso
-  aviso: '#ffe096',           // Amarelo aviso
+  aviso: '#ffc94a',           // Amarelo aviso
   erro: '#fbb7b7',            // Vermelho erro
-  info: '#99d9ea',            // Azul informação
+  info: '#5ac1dd',            // Azul informação
   
   // Especiais
   branco: '#ffffff',

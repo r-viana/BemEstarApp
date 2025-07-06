@@ -1,13 +1,18 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { cores } from './Cores';
 
 // Import de telas
-import Login from '../views/screens/Login';
+
 import Cadastro from '../views/screens/Cadastro';
+import HealthTracker from '../views/screens/HealthTracker';
+import Login from '../views/screens/Login';
+import Perfil from '../views/screens/Perfil';
 import Principal from '../views/screens/Principal';
-import VerificarEmail from '../views/screens/VerificarEmail';
 import RecuperarSenha from '../views/screens/RecuperarSenha';
+import VerificarEmail from '../views/screens/VerificarEmail';
+
 
 
 // Criar o stack navigator
@@ -44,7 +49,42 @@ export default function Navegacao() {
           name="RecuperarSenha"
           component={RecuperarSenha}
           options={{ title: 'Recuperar Senha' }}
-/>
+        />
+         <Stack.Screen
+        name="Perfil"
+        component={Perfil}
+        options={{title: 'Meu Perfil',
+          headerStyle: { backgroundColor: cores.primaria },
+          headerTintColor: cores.branco,
+          headerTitleStyle: { fontWeight: 'bold'}
+        }}
+        />
+        <Stack.Screen
+          name="HealthTracker"
+          component={HealthTracker}
+          options={{ title: 'Health Tracker' }}
+        />
+
+        {/* Rotas temporárias - criar as telas depois */}
+{/* 
+        
+        <Stack.Screen
+        name="RegistroAtividades"
+        component={RegistroAtividades}
+        options={{ title: 'Registro de Atividades' }}
+        />
+        <Stack.Screen
+        name="Configuracoes"
+        component={Configuracoes}
+        options={{ title: 'Configurações' }}
+        />
+        <Stack.Screen
+        name="Estatisticas"
+        component={Estatisticas}
+        options={{ title: 'Estatísticas' }}
+        />
+*/}
+
 
       </Stack.Navigator>
     </NavigationContainer>

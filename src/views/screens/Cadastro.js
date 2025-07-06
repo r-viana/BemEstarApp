@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { cores } from '../../utils/Cores';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, firestore } from '../../services/FirebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 
 
 
@@ -54,13 +54,13 @@ const fazerCadastro = async () => {
 
     // Salvar dados no Firestore
     console.log('8. Salvando dados no Firestore...');
-    await addDoc(collection(firestore, 'usuarios_pendentes'), {
-      uid: userCredential.user.uid,
+      await setDoc(doc(firestore, 'users', userCredential.user.uid), {
       email: email,
       nome: nome,
       criadoEm: new Date(),
       verificado: false
-    });
+});
+
     console.log('9. Dados salvos no Firestore');
 
     // Enviar email de verificação

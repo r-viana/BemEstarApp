@@ -2,22 +2,45 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Configuração do Firebase e credenciais
-
+// Configuração do Firebase com as novas credenciais
 const firebaseConfig = {
-  apiKey: "AIzaSyB4Ol1UzVaK9xehy0E4u0ekjbsv3lK-TVA",
-  authDomain: "bem-estar-app-4fb14.firebaseapp.com",
-  projectId: "bem-estar-app-4fb14",
-  storageBucket: "bem-estar-app-4fb14.firebasestorage.app",
-  messagingSenderId: "767114686369",
-  appId: "1:767114686369:web:49490c9a46657e203965e0",
-  measurementId: "G-DR08Y78DBQ"
+  apiKey: "AIzaSyDUpg5E2BJBh1piFWqFbsJedUquXbnU0r8",
+  authDomain: "bem-estar-app-f4ac1.firebaseapp.com",
+  projectId: "bem-estar-app-f4ac1",
+  storageBucket: "bem-estar-app-f4ac1.firebasestorage.app",
+  messagingSenderId: "385855823407",
+  appId: "1:385855823407:android:42131c2a9544c6dcccb0da"
 };
 
-//firebase 
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-//serviços
+// Serviços
 export const auth = getAuth(app);
 export const firestore = getFirestore(app);
+
+// Coleções do Firestore
+export const COLLECTIONS = {
+  USERS: 'users',
+  OBJETIVOS: 'objetivos'
+};
+
+// Funções utilitárias
+export const getCurrentUser = () => {
+  return auth.currentUser;
+};
+
+export const isUserLoggedIn = () => {
+  return auth.currentUser !== null;
+};
+
+export const getUserId = () => {
+  const user = getCurrentUser();
+  return user ? user.uid : null;
+};
+
+export const onAuthStateChanged = (callback) => {
+  return auth.onAuthStateChanged(callback);
+};
+
 export default app;

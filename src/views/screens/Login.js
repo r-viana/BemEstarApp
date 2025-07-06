@@ -91,11 +91,17 @@ const fazerLogin = async () => {
         onChangeText={setSenha}
         secureTextEntry
       />
-      
+      {/* Botão de Entrar */}
       <TouchableOpacity style={estilos.botao} onPress={fazerLogin}>
         <Text style={estilos.textoBotao}>Entrar</Text>
       </TouchableOpacity>
       
+      {/* Botão de Esqueci minha senha */}
+      <TouchableOpacity onPress={() => navigation.navigate('RecuperarSenha')}>
+        <Text style={estilos.linkEsqueciSenha}>Esqueci minha senha</Text>
+      </TouchableOpacity>
+
+      {/* Botão de Cadastre-se */}           
       <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
         <Text style={estilos.linkCadastro}>Não tem conta? Cadastre-se</Text>
       </TouchableOpacity>
@@ -145,4 +151,11 @@ const estilos = StyleSheet.create({
     color: cores.primaria,
     fontSize: 16,
   },
+  linkEsqueciSenha: {
+  textAlign: 'center',
+  marginTop: 15,
+  color: cores.textoSecundario,
+  fontSize: 14,
+  },
+
 });

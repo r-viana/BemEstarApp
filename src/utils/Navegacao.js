@@ -7,6 +7,8 @@ import Login from '../views/screens/Login';
 import Cadastro from '../views/screens/Cadastro';
 import Principal from '../views/screens/Principal';
 import VerificarEmail from '../views/screens/VerificarEmail';
+import RecuperarSenha from '../views/screens/RecuperarSenha';
+
 
 // Criar o stack navigator
 const Stack = createNativeStackNavigator();
@@ -37,6 +39,13 @@ export default function Navegacao() {
           component={VerificarEmail}
           options={{title: 'Verificar Email'}}
         />
+
+        <Stack.Screen
+          name="RecuperarSenha"
+          component={RecuperarSenha}
+          options={{ title: 'Recuperar Senha' }}
+/>
+
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,16 +1,75 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { cores } from '../../utils/Cores';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth } from '../../services/FirebaseConfig';
+
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
-  const fazerLogin = () => {
-    // login
-    console.log('Email:', email);
-    console.log('Senha:', senha);
-  };
+const fazerLogin = async () => {
+  // Validação se ele preencheu todos os campos 
+  if (!email || !senha) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos');
+    return;
+  }
+
+  try {
+    // Fazer login no Firebase
+    const resultado = await signInWithEmailAndPassword(auth, email, senha);
+    
+    // Verificar se email foi confirmado
+    if (!resultado.user.emailVerified) {
+      // Fazer logout imediatamente
+      await auth.signOut();
+      
+      Alert.alert(
+        'Email não verificado',
+        'Você precisa verificar seu email antes de fazer login.',
+        [
+          { 
+            text: 'Reenviar email', 
+            onPress: () => reenviarEmailVerificacao(resultado.user) 
+          },
+          { text: 'OK' }
+        ]
+      );
+      return;
+    }
+    
+    // Aqui o email já foi verificado
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Principal' }],
+    });
+
+  } catch (error) {
+    let mensagemErro = 'Erro ao fazer login';
+    
+    switch (error.code) {
+      case 'auth/user-not-found':
+        mensagemErro = 'Usuário não encontrado';
+        break;
+      case 'auth/wrong-password':
+        mensagemErro = 'Senha incorreta';
+        break;
+      case 'auth/invalid-email':
+        mensagemErro = 'Email inválido';
+        break;
+      case 'auth/too-many-requests':
+        mensagemErro = 'Muitas tentativas. Tente novamente mais tarde';
+        break;
+      default:
+        mensagemErro = 'Erro ao fazer login: ' + error.message;
+    }
+    
+    Alert.alert('Erro', mensagemErro);
+  }
+};
+
+
 
   return (
     <View style={estilos.container}>

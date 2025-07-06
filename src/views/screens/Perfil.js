@@ -5,7 +5,7 @@ import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { signOut, updateProfile, reauthenticateWithCredential, 
   EmailAuthProvider, updateEmail, sendEmailVerification, 
-verifyBeforeUpdateEmail } from 'firebase/auth';
+verifyBeforeUpdateEmail, updatePassword } from 'firebase/auth';
 
 export default function Perfil({ navigation }) {
 const [editandoNome, setEditandoNome] = useState(false);
@@ -14,6 +14,13 @@ const [editandoEmail, setEditandoEmail] = useState(false);
 const [novoEmail, setNovoEmail] = useState('');
 const [modalEdicao, setModalEdicao] = useState({ visivel: false, tipo: '', valor: '' });
 const [modalSenha, setModalSenha] = useState({ visivel: false, senha: '' });
+const [modalAlterarSenha, setModalAlterarSenha] = useState({ 
+  visivel: false, 
+  etapa: 'confirmar', // 'confirmar' ou 'nova'
+  senhaAtual: '', 
+  novaSenha: '', 
+  confirmarNovaSenha: '' 
+});
 
 
 const [dadosUsuario, setDadosUsuario] = useState({
@@ -220,6 +227,135 @@ const confirmarSenha = () => {
   fecharModalSenha();
 };
 
+const abrirModalAlterarSenha = () => {
+  Alert.alert(
+    'Alterar Senha',
+    'Requisitos da nova senha:\n\n• Mínimo 6 caracteres\n• Pode conter números e letras\n\nApós a alteração, você será desconectado e precisará fazer login novamente.',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      { 
+        text: 'Continuar', 
+        onPress: () => {
+          console.log('Abrindo modal para alterar senha...');
+          setModalAlterarSenha({
+            visivel: true,
+            etapa: 'confirmar',
+            senhaAtual: '',
+            novaSenha: '',
+            confirmarNovaSenha: ''
+          });
+        }
+      }
+    ]
+  );
+};
+
+const fecharModalAlterarSenha = () => {
+  setModalAlterarSenha({
+    visivel: false,
+    etapa: 'confirmar',
+    senhaAtual: '',
+    novaSenha: '',
+    confirmarNovaSenha: ''
+  });
+};
+
+const confirmarSenhaAtual = async () => {
+  console.log('Verificando senha atual...');
+  
+  if (!modalAlterarSenha.senhaAtual.trim()) {
+    Alert.alert('Erro', 'Digite sua senha atual');
+    return;
+  }
+
+  try {
+    console.log('Tentando re-autenticar com senha atual...');
+    const usuario = auth.currentUser;
+    const credential = EmailAuthProvider.credential(usuario.email, modalAlterarSenha.senhaAtual);
+    await reauthenticateWithCredential(usuario, credential);
+    
+    console.log('Re-autenticação bem-sucedida, indo para próxima etapa...');
+    setModalAlterarSenha(prev => ({
+      ...prev,
+      etapa: 'nova'
+    }));
+    
+  } catch (error) {
+    console.log('Erro na re-autenticação:', error);
+    
+    let mensagemErro = 'Senha incorreta';
+    if (error.code === 'auth/invalid-login-credentials') {
+      mensagemErro = 'Senha atual incorreta';
+    }
+    
+    Alert.alert('Erro', mensagemErro);
+  }
+};
+const salvarNovaSenha = async () => {
+  console.log('Validando nova senha...');
+  
+  // Validar se campos não estão vazios
+  if (!modalAlterarSenha.novaSenha.trim() || !modalAlterarSenha.confirmarNovaSenha.trim()) {
+    Alert.alert('Erro', 'Preencha todos os campos');
+    return;
+  }
+  
+  // Validar tamanho mínimo
+  if (modalAlterarSenha.novaSenha.length < 6) {
+    Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres');
+    return;
+  }
+  
+  // Validar se senhas coincidem
+  if (modalAlterarSenha.novaSenha !== modalAlterarSenha.confirmarNovaSenha) {
+    Alert.alert('Erro', 'As senhas não coincidem');
+    return;
+  }
+  
+  try {
+    console.log('Atualizando senha...');
+    const usuario = auth.currentUser;
+    await updatePassword(usuario, modalAlterarSenha.novaSenha);
+    
+    console.log('Senha atualizada com sucesso!');
+    fecharModalAlterarSenha();
+    
+    Alert.alert(
+      'Senha Alterada!',
+      'Sua senha foi alterada com sucesso. Você será desconectado para fazer login com a nova senha.',
+      [{ 
+        text: 'OK', 
+        onPress: () => {
+          console.log('Fazendo logout automático após alteração de senha...');
+          fazerLogout();
+        }
+      }]
+    );
+    
+  } catch (error) {
+    console.log('Erro ao alterar senha:', error);
+    
+    let mensagemErro = 'Não foi possível alterar a senha';
+    if (error.code === 'auth/weak-password') {
+      mensagemErro = 'A senha é muito fraca';
+    }
+    
+    Alert.alert('Erro', mensagemErro);
+  }
+};
+
+const voltarParaSenhaAtual = () => {
+  console.log('Voltando para etapa de senha atual...');
+  setModalAlterarSenha(prev => ({
+    ...prev,
+    etapa: 'confirmar',
+    novaSenha: '',
+    confirmarNovaSenha: ''
+  }));
+};
+
+
+
 
   const fazerLogout = async () => {
     try {
@@ -315,12 +451,13 @@ const confirmarSenha = () => {
 
       {/* Botões de Ação */}
       <View style={estilos.secaoBotoes}>
-        <TouchableOpacity 
-          style={estilos.botaoAcao}
-          onPress={() => Alert.alert('Em breve', 'Funcionalidade em desenvolvimento')}
+        <TouchableOpacity
+        style={estilos.botaoAcao}
+        onPress={abrirModalAlterarSenha}
         >
           <Text style={estilos.textoBotaoAcao}>🔐 Alterar Senha</Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+
 
         <TouchableOpacity 
           style={estilos.botaoSair}
@@ -410,6 +547,92 @@ const confirmarSenha = () => {
           </View>
         </View>
       </Modal>
+            {/* Modal de Alterar Senha */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalAlterarSenha.visivel}
+        onRequestClose={fecharModalAlterarSenha}
+      >
+        <View style={estilos.modalOverlay}>
+          <View style={estilos.modalContainer}>
+            {modalAlterarSenha.etapa === 'confirmar' ? (
+              <>
+                <Text style={estilos.modalTitulo}>Confirme sua senha atual</Text>
+                <Text style={estilos.modalSubtitulo}>
+                  Para sua segurança, digite sua senha atual:
+                </Text>
+                
+                <TextInput
+                  style={estilos.modalInput}
+                  value={modalAlterarSenha.senhaAtual}
+                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, senhaAtual: senha }))}
+                  placeholder="Digite sua senha atual"
+                  secureTextEntry={true}
+                  autoFocus={true}
+                />
+                
+                <View style={estilos.modalBotoes}>
+                  <TouchableOpacity 
+                    style={estilos.botaoModalCancelar}
+                    onPress={fecharModalAlterarSenha}
+                  >
+                    <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={estilos.botaoModalConfirmar}
+                    onPress={confirmarSenhaAtual}
+                  >
+                    <Text style={estilos.textoBotaoModalConfirmar}>Confirmar</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={estilos.modalTitulo}>Definir nova senha</Text>
+                <Text style={estilos.modalSubtitulo}>
+                  A nova senha deve ter pelo menos 6 caracteres (números ou letras):
+                </Text>
+                
+                <TextInput
+                  style={estilos.modalInput}
+                  value={modalAlterarSenha.novaSenha}
+                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, novaSenha: senha }))}
+                  placeholder="Digite a nova senha"
+                  secureTextEntry={true}
+                  autoFocus={true}
+                />
+                
+                <TextInput
+                  style={estilos.modalInput}
+                  value={modalAlterarSenha.confirmarNovaSenha}
+                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, confirmarNovaSenha: senha }))}
+                  placeholder="Confirme a nova senha"
+                  secureTextEntry={true}
+                />
+                
+                <View style={estilos.modalBotoes}>
+                  <TouchableOpacity 
+                    style={estilos.botaoModalCancelar}
+                    onPress={voltarParaSenhaAtual}
+                  >
+                    <Text style={estilos.textoBotaoModalCancelar}>Voltar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={estilos.botaoModalConfirmar}
+                    onPress={salvarNovaSenha}
+                  >
+                    <Text style={estilos.textoBotaoModalConfirmar}>Salvar</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
 
     </ScrollView>
     );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { signOut } from 'firebase/auth';
@@ -84,6 +84,9 @@ export default function Principal({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* ScrollView para garantir que tudo caiba na tela */}
+      <ScrollView contentContainerStyle={estilos.scrollContainer}></ScrollView>
+
       {/* Área de boas-vindas */}
       <View style={estilos.areaBemVindo}>
         <Text style={estilos.textoBoasVindas}>
@@ -119,12 +122,13 @@ export default function Principal({ navigation }) {
           <Text style={estilos.textoBotaoMenu}>✅ Health Tracker</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={estilos.botaoMenu}
-          onPress={() => navigation.navigate('RegistroAtividades')}
-        >
-          <Text style={estilos.textoBotaoMenu}>📝 Registro de Atividades</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+        style={estilos.botaoMenu}
+        // AQUI ESTÁ A MUDANÇA: Apontando para a rota correta
+          onPress={() => navigation.navigate('HistoricoDeAtividades')}
+          >
+            <Text style={estilos.textoBotaoMenu}>📝 Histórico de Atividades</Text>
+            </TouchableOpacity>
 
         <TouchableOpacity 
           style={estilos.botaoMenu}
@@ -162,6 +166,9 @@ const estilos = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: cores.fundo,
+  },
+  scrollContainer: { // Estilo para o conteúdo do ScrollView
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',

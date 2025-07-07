@@ -12,6 +12,7 @@ import Perfil from '../views/screens/Perfil';
 import Principal from '../views/screens/Principal';
 import RecuperarSenha from '../views/screens/RecuperarSenha';
 import VerificarEmail from '../views/screens/VerificarEmail';
+import HistoricoDeAtividades from '../views/screens/HistoricoDeAtividades';
 
 
 
@@ -63,6 +64,17 @@ export default function Navegacao() {
           name="HealthTracker"
           component={HealthTracker}
           options={{ title: 'Health Tracker' }}
+        />
+        <Stack.Screen
+          name="HistoricoDeAtividades"
+          component={HistoricoDeAtividades}
+          options={{
+            headerShown: true, // Mostra o header com botão de voltar
+            title: 'Histórico de Atividades',
+            headerStyle: { backgroundColor: cores.primaria },
+            headerTintColor: cores.branco,
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
         />
 
         {/* Rotas temporárias - criar as telas depois */}

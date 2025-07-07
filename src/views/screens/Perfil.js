@@ -1,23 +1,18 @@
-import EditarNome from '../components/EditarNome';
+
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
+  ScrollView, Alert, Modal, TextInput} from 'react-native';
 import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
-import { signOut, updateProfile, reauthenticateWithCredential, 
-  EmailAuthProvider, updateEmail, sendEmailVerification, 
-verifyBeforeUpdateEmail, updatePassword } from 'firebase/auth';
+import { signOut, updateProfile, updatePassword } from 'firebase/auth';
 
+import EditarNome from '../components/EditarNome';
+import EditarEmail from '../components/EditarEmail';
 
 export default function Perfil({ navigation }) {
   const [carregando, setCarregando] = useState(false);
-  const [editandoNome, setEditandoNome] = useState(false);
-  const [novoNome, setNovoNome] = useState('');
-  const [editandoEmail, setEditandoEmail] = useState(false);
-  const [novoEmail, setNovoEmail] = useState('');
-  const [modalEdicao, setModalEdicao] = useState({ visivel: false, tipo: '', valor: '' });
-  const [modalSenha, setModalSenha] = useState({ visivel: false, senha: '' });
+  const [modalEditarEmailVisivel, setModalEditarEmailVisivel] = useState(false);
   const [modalAlterarSenha, setModalAlterarSenha] = useState({ 
     visivel: false, 
     etapa: 'confirmar', // 'confirmar' ou 'nova'
@@ -25,6 +20,9 @@ export default function Perfil({ navigation }) {
     novaSenha: '', 
     confirmarNovaSenha: '' 
 });
+  const [modalEditarNome, setModalEditarNome] = useState(false);
+  
+
 
 
 const [dadosUsuario, setDadosUsuario] = useState({
@@ -38,8 +36,41 @@ const [dadosUsuario, setDadosUsuario] = useState({
 
 
   useEffect(() => {
-    carregarDadosUsuario();
-  }, []);
+    const carregarDadosUsuario = () => {
+      const usuario = auth.currentUser;
+      if (usuario) {
+        setDadosUsuario({
+          nome: usuario.displayName || 'Usuário',
+          email: usuario.email || 'N/A',
+          dataCadastro: usuario.metadata.creationTime ? new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR') : 'N/A',
+          diasConsecutivos: 0, // Estes podem ser carregados de outro lugar, se houver
+          recordeDias: 0,     // Estes podem ser carregados de outro lugar, se houver
+          totalAtividades: 0  // Estes podem ser carregados de outro lugar, se houver
+        });
+        // Se você tiver dados adicionais do usuário em Firestore/Realtime DB, carregue-os aqui também
+        // Ex: carregarDadosAdicionaisDoBanco(usuario.uid);
+      } else {
+        setDadosUsuario({
+          nome: '',
+          email: '',
+          dataCadastro: '',
+          diasConsecutivos: 0,
+          recordeDias: 0,
+          totalAtividades: 0
+        });
+      }
+    };
+
+    // Este listener garante que os dados do usuário sejam atualizados
+    // sempre que o estado de autenticação mudar (login, logout, atualização de perfil)
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      carregarDadosUsuario();
+    });
+
+    // Retorna uma função de limpeza para desinscrever o listener quando o componente for desmontado
+    return unsubscribe;
+  }, []); // O array de dependências vazio significa que ele roda uma vez na montagem e na desmontagem
+
 
 
   const carregarDadosUsuario = async () => {
@@ -92,163 +123,7 @@ const [dadosUsuario, setDadosUsuario] = useState({
     );
   };
 
-const abrirModalEdicao = (tipo, valorAtual) => {
-  setModalEdicao({
-    visivel: true,
-    tipo: tipo,
-    valor: valorAtual
-  });
-};
 
-const fecharModalEdicao = () => {
-  setModalEdicao({ visivel: false, tipo: '', valor: '' });
-};
-
-const confirmarEdicao = async () => {
-  console.log('confirmarEdicao chamada');
-  console.log('Modal tipo:', modalEdicao.tipo);
-  console.log('Modal valor:', modalEdicao.valor);
-  
-  if (modalEdicao.tipo === 'nome') {
-    console.log('Tentando salvar nome...');
-    await salvarNovoNome();
-  } else if (modalEdicao.tipo === 'email') {
-    console.log('Tentando salvar email...');
-    await salvarNovoEmail();
-  }
-};
-
-const salvarNovoNome = async () => {
-  console.log('salvarNovoNome chamada');
-  console.log('Valor para salvar:', modalEdicao.valor);
-  
-  if (!modalEdicao.valor.trim()) {
-    console.log('Erro: nome vazio');
-    Alert.alert('Erro', 'Nome não pode estar vazio');
-    return;
-  }
-
-  setCarregando(true);
-
-  try {
-    console.log('Tentando atualizar perfil...');
-    await updateProfile(auth.currentUser, {
-      displayName: modalEdicao.valor.trim()
-    });
-    
-    console.log('Perfil atualizado, atualizando estado...');
-    setDadosUsuario(prev => ({
-      ...prev,
-      nome: modalEdicao.valor.trim()
-    }));
-    
-    console.log('Fechando modal...');
-    fecharModalEdicao();
-    
-    console.log('Mostrando alerta de sucesso...');
-    Alert.alert('Sucesso', 'Nome atualizado com sucesso!');
-  } catch (error) {
-    console.log('Erro ao salvar nome:', error);
-    Alert.alert('Erro', 'Não foi possível atualizar o nome');
-  } finally{
-      setCarregando(false);
-  }
-};
-
-const salvarNovoEmail = async () => {
-  console.log('salvarNovoEmail chamada');
-  console.log('Valor para salvar:', modalEdicao.valor);
-  
-  if (!modalEdicao.valor.trim()) {
-    console.log('Erro: email vazio');
-    Alert.alert('Erro', 'Email não pode estar vazio');
-    return;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(modalEdicao.valor.trim())) {
-    console.log('Erro: email inválido');
-    Alert.alert('Erro', 'Email inválido');
-    return;
-  }
-
-  console.log('Email válido, abrindo modal de senha...');
-  setModalSenha({ visivel: true, senha: '' });
-};
-
-const confirmarAlteracaoEmail = async (senha) => {
-  console.log('confirmarAlteracaoEmail chamada');
-  console.log('Senha recebida:', senha ? 'Sim' : 'Não');
-  
-  if (!senha) {
-    console.log('Erro: senha não fornecida');
-    Alert.alert('Erro', 'Senha é obrigatória');
-    return;
-  }
-    setCarregando(true);
-
-  try {
-    console.log('Tentando re-autenticar...');
-    const usuario = auth.currentUser;
-    const credential = EmailAuthProvider.credential(usuario.email, senha);
-    await reauthenticateWithCredential(usuario, credential);
-    
-    console.log('Re-autenticação bem-sucedida, enviando verificação do novo email...');
-    await verifyBeforeUpdateEmail(usuario, modalEdicao.valor.trim());
-    
-    console.log('Email de verificação enviado com sucesso!');
-    
-    fecharModalEdicao();
-    
-    Alert.alert(
-      'Verificação Enviada!', 
-      `Um email de verificação foi enviado para ${modalEdicao.valor}. Clique no link do email para confirmar a alteração.\n\nVocê será deslogado para fazer login com o novo email.`,
-      [{ 
-        text: 'OK', 
-        onPress: () => {
-          console.log('Fazendo logout automático...');
-          fazerLogout();
-        }
-      }]
-    );
-    
-  } catch (error) {
-    console.log('Erro ao alterar email:', error);
-    console.log('Código do erro:', error.code);
-    
-    let mensagemErro = 'Não foi possível atualizar o email';
-    
-    if (error.code === 'auth/wrong-password') {
-      mensagemErro = 'Senha incorreta';
-    } else if (error.code === 'auth/email-already-in-use') {
-      mensagemErro = 'Este email já está em uso';
-    } else if (error.code === 'auth/invalid-login-credentials') {
-      mensagemErro = 'Credenciais inválidas';
-    } else if (error.code === 'auth/operation-not-allowed') {
-      mensagemErro = 'Operação não permitida pelo Firebase';
-    }
-    
-    Alert.alert('Erro', mensagemErro);
-  }finally{
-      setCarregando(false);
-  }
-};
-
-const fecharModalSenha = () => {
-  setModalSenha({ visivel: false, senha: '' });
-};
-
-const confirmarSenha = async () => {
-  console.log('Confirmando senha para alteração de email...');
-  
-  if (!modalSenha.senha.trim()) {
-    Alert.alert('Erro', 'Digite sua senha');
-    return;
-  }
-
-  await confirmarAlteracaoEmail(modalSenha.senha);
-  fecharModalSenha();
-};
 
 const abrirModalAlterarSenha = () => {
   Alert.alert(
@@ -421,7 +296,7 @@ return (
             <Text style={estilos.valorInformacao}>{dadosUsuario.nome}</Text>
             <TouchableOpacity 
               style={estilos.iconeEditar}
-              onPress={() => abrirModalEdicao('nome', dadosUsuario.nome)}
+              onPress={() => setModalEditarNome(true)}
             >
               <Text style={estilos.textoIconeEditar}>✏️</Text>
             </TouchableOpacity>
@@ -434,8 +309,8 @@ return (
             <Text style={estilos.valorInformacao}>{dadosUsuario.email}</Text>
             <TouchableOpacity 
               style={estilos.iconeEditar}
-              onPress={() => abrirModalEdicao('email', dadosUsuario.email)}
-            >
+              onPress={() => setModalEditarEmailVisivel(true)}
+              >
               <Text style={estilos.textoIconeEditar}>✏️</Text>
             </TouchableOpacity>
           </View>
@@ -465,102 +340,30 @@ return (
       </TouchableOpacity>
     </View>
     
-    {/* Modal de Edição (Nome/Email) */}
-    <Modal
-      visible={modalEdicao.visivel}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={fecharModalEdicao}
-    >
-      <View style={estilos.modalOverlay}>
-        <View style={estilos.modalContainer}>
-          <Text style={estilos.modalTitulo}>
-            {modalEdicao.tipo === 'nome' ? 'Editar Nome' : 'Editar Email'}
-          </Text>
-          
-          <TextInput
-            style={estilos.modalInput}
-            value={modalEdicao.valor}
-            onChangeText={(texto) => setModalEdicao(prev => ({ ...prev, valor: texto }))}
-            placeholder={modalEdicao.tipo === 'nome' ? 'Digite o novo nome' : 'Digite o novo email'}
-            keyboardType={modalEdicao.tipo === 'email' ? 'email-address' : 'default'}
-            autoFocus={true}
-            editable={!carregando}
-          />
-          
-          <View style={estilos.modalBotoes}>
-            <TouchableOpacity 
-              style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
-              onPress={fecharModalEdicao}
-              disabled={carregando}
-            >
-              <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
-              onPress={confirmarEdicao}
-              disabled={carregando}
-            >
-              {carregando ? (
-                <ActivityIndicator size="small" color={cores.branco} />
-              ) : (
-                <Text style={estilos.textoBotaoModalConfirmar}>Salvar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-
-    {/* Modal de Confirmação de Senha para Email */}
-    <Modal
-      visible={modalSenha.visivel}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={fecharModalSenha}
-    >
-      <View style={estilos.modalOverlay}>
-        <View style={estilos.modalContainer}>
-          <Text style={estilos.modalTitulo}>Confirme sua senha</Text>
-          <Text style={estilos.modalSubtitulo}>
-            Para alterar o email, digite sua senha atual:
-          </Text>
-          
-          <TextInput
-            style={estilos.modalInput}
-            value={modalSenha.senha}
-            onChangeText={(senha) => setModalSenha(prev => ({ ...prev, senha }))}
-            placeholder="Digite sua senha atual"
-            secureTextEntry={true}
-            autoFocus={true}
-            editable={!carregando}
-          />
-          
-          <View style={estilos.modalBotoes}>
-            <TouchableOpacity 
-              style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
-              onPress={fecharModalSenha}
-              disabled={carregando}
-            >
-              <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
-              onPress={confirmarSenha}
-              disabled={carregando}
-            >
-              {carregando ? (
-                <ActivityIndicator size="small" color={cores.branco} />
-              ) : (
-                <Text style={estilos.textoBotaoModalConfirmar}>Confirmar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    
+    
+    {/*Componente de Editar Nome */}
+    <EditarNome
+      visivel={modalEditarNome} // Estado que controla a visibilidade do modal de nome
+      nomeAtual={dadosUsuario.nome} // Passa o nome atual do usuário para o modal
+      onFechar={() => setModalEditarNome(false)} // Função para fechar o modal
+      onSucesso={(novoNome) => { // Função chamada quando o nome é salvo com sucesso
+        setDadosUsuario(prev => ({ ...prev, nome: novoNome })); // Atualiza o nome no estado de dadosUsuario
+      }}
+    />
+          {/* Componente de Edição de Email */}
+      <EditarEmail
+        visivel={modalEditarEmailVisivel}
+        fecharModal={() => setModalEditarEmailVisivel(false)}
+        emailAtual={dadosUsuario.email} // Passamos o email atual do usuário
+        aoEmailAtualizado={(novoEmail) => {
+          // Esta função será chamada pelo EditarEmail.js quando o email for atualizado com sucesso
+          // Aqui você pode querer atualizar o estado local 'dadosUsuario' no Perfil.js
+          // para refletir o novo email instantaneamente na tela.
+          setDadosUsuario(prev => ({ ...prev, email: novoEmail }));
+          Alert.alert('Sucesso', 'Seu email foi atualizado! Lembre-se de verificá-lo.');
+        }}
+      />
 
     {/* Modal de Alterar Senha */}
     <Modal

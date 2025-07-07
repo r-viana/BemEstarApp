@@ -1,25 +1,29 @@
+import EditarNome from '../components/EditarNome';
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, TextInput, Modal } from 'react-native';
+  ScrollView, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { signOut, updateProfile, reauthenticateWithCredential, 
   EmailAuthProvider, updateEmail, sendEmailVerification, 
 verifyBeforeUpdateEmail, updatePassword } from 'firebase/auth';
 
+
 export default function Perfil({ navigation }) {
-const [editandoNome, setEditandoNome] = useState(false);
-const [novoNome, setNovoNome] = useState('');
-const [editandoEmail, setEditandoEmail] = useState(false);
-const [novoEmail, setNovoEmail] = useState('');
-const [modalEdicao, setModalEdicao] = useState({ visivel: false, tipo: '', valor: '' });
-const [modalSenha, setModalSenha] = useState({ visivel: false, senha: '' });
-const [modalAlterarSenha, setModalAlterarSenha] = useState({ 
-  visivel: false, 
-  etapa: 'confirmar', // 'confirmar' ou 'nova'
-  senhaAtual: '', 
-  novaSenha: '', 
-  confirmarNovaSenha: '' 
+  const [carregando, setCarregando] = useState(false);
+  const [editandoNome, setEditandoNome] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
+  const [editandoEmail, setEditandoEmail] = useState(false);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [modalEdicao, setModalEdicao] = useState({ visivel: false, tipo: '', valor: '' });
+  const [modalSenha, setModalSenha] = useState({ visivel: false, senha: '' });
+  const [modalAlterarSenha, setModalAlterarSenha] = useState({ 
+    visivel: false, 
+    etapa: 'confirmar', // 'confirmar' ou 'nova'
+    senhaAtual: '', 
+    novaSenha: '', 
+    confirmarNovaSenha: '' 
 });
 
 
@@ -36,6 +40,7 @@ const [dadosUsuario, setDadosUsuario] = useState({
   useEffect(() => {
     carregarDadosUsuario();
   }, []);
+
 
   const carregarDadosUsuario = async () => {
     try {
@@ -57,6 +62,18 @@ const [dadosUsuario, setDadosUsuario] = useState({
       }
     } catch (error) {
       console.log('Erro ao carregar dados:', error);
+    }
+  };
+
+  const fazerLogout = async () => {
+    try {
+      await signOut(auth);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.log('Erro ao fazer logout:', error);
     }
   };
 
@@ -88,9 +105,9 @@ const fecharModalEdicao = () => {
 };
 
 const confirmarEdicao = async () => {
-  console.log('confirmarEdicao chamada'); //Log pra ser retirado
-  console.log('Modal tipo:', modalEdicao.tipo); //log 
-  console.log('Modal valor:', modalEdicao.valor); //log 
+  console.log('confirmarEdicao chamada');
+  console.log('Modal tipo:', modalEdicao.tipo);
+  console.log('Modal valor:', modalEdicao.valor);
   
   if (modalEdicao.tipo === 'nome') {
     console.log('Tentando salvar nome...');
@@ -101,16 +118,17 @@ const confirmarEdicao = async () => {
   }
 };
 
-
 const salvarNovoNome = async () => {
-  console.log('salvarNovoNome chamada'); //log
-  console.log('Valor para salvar:', modalEdicao.valor);//log
+  console.log('salvarNovoNome chamada');
+  console.log('Valor para salvar:', modalEdicao.valor);
   
   if (!modalEdicao.valor.trim()) {
     console.log('Erro: nome vazio');
     Alert.alert('Erro', 'Nome não pode estar vazio');
     return;
   }
+
+  setCarregando(true);
 
   try {
     console.log('Tentando atualizar perfil...');
@@ -132,9 +150,10 @@ const salvarNovoNome = async () => {
   } catch (error) {
     console.log('Erro ao salvar nome:', error);
     Alert.alert('Erro', 'Não foi possível atualizar o nome');
+  } finally{
+      setCarregando(false);
   }
 };
-
 
 const salvarNovoEmail = async () => {
   console.log('salvarNovoEmail chamada');
@@ -157,8 +176,6 @@ const salvarNovoEmail = async () => {
   setModalSenha({ visivel: true, senha: '' });
 };
 
-
-
 const confirmarAlteracaoEmail = async (senha) => {
   console.log('confirmarAlteracaoEmail chamada');
   console.log('Senha recebida:', senha ? 'Sim' : 'Não');
@@ -168,6 +185,7 @@ const confirmarAlteracaoEmail = async (senha) => {
     Alert.alert('Erro', 'Senha é obrigatória');
     return;
   }
+    setCarregando(true);
 
   try {
     console.log('Tentando re-autenticar...');
@@ -211,19 +229,24 @@ const confirmarAlteracaoEmail = async (senha) => {
     }
     
     Alert.alert('Erro', mensagemErro);
+  }finally{
+      setCarregando(false);
   }
 };
-
-
-
 
 const fecharModalSenha = () => {
   setModalSenha({ visivel: false, senha: '' });
 };
 
-const confirmarSenha = () => {
-  console.log('Senha confirmada, chamando confirmarAlteracaoEmail...');
-  confirmarAlteracaoEmail(modalSenha.senha);
+const confirmarSenha = async () => {
+  console.log('Confirmando senha para alteração de email...');
+  
+  if (!modalSenha.senha.trim()) {
+    Alert.alert('Erro', 'Digite sua senha');
+    return;
+  }
+
+  await confirmarAlteracaoEmail(modalSenha.senha);
   fecharModalSenha();
 };
 
@@ -291,6 +314,7 @@ const confirmarSenhaAtual = async () => {
     Alert.alert('Erro', mensagemErro);
   }
 };
+
 const salvarNovaSenha = async () => {
   console.log('Validando nova senha...');
   
@@ -312,6 +336,7 @@ const salvarNovaSenha = async () => {
     return;
   }
   
+  setCarregando(true);
   try {
     console.log('Atualizando senha...');
     const usuario = auth.currentUser;
@@ -341,11 +366,13 @@ const salvarNovaSenha = async () => {
     }
     
     Alert.alert('Erro', mensagemErro);
+  } finally {
+    setCarregando(false);
   }
 };
 
 const voltarParaSenhaAtual = () => {
-  console.log('Voltando para etapa de senha atual...');
+  console.log('Voltando para confirmar senha atual...');
   setModalAlterarSenha(prev => ({
     ...prev,
     etapa: 'confirmar',
@@ -354,289 +381,302 @@ const voltarParaSenhaAtual = () => {
   }));
 };
 
+return (
+  <ScrollView style={estilos.container}>
+    {/* Header do Perfil */}
+    <View style={estilos.headerPerfil}>
+      <View style={estilos.avatarContainer}>
+        <Text style={estilos.avatar}>👤</Text>
+      </View>
+      <Text style={estilos.nomeUsuario}>{dadosUsuario.nome}</Text>
+      <Text style={estilos.emailUsuario}>{dadosUsuario.email}</Text>
+    </View>
 
+    {/* Seção de Estatísticas */}
+    <View style={estilos.secaoEstatisticas}>
+      <Text style={estilos.tituloSecao}>Estatísticas</Text>
+      <View style={estilos.cardEstatistica}>
+        <View style={estilos.itemEstatistica}>
+          <Text style={estilos.numeroEstatistica}>{dadosUsuario.diasConsecutivos}</Text>
+          <Text style={estilos.labelEstatistica}>Dias{'\n'}Consecutivos</Text>
+        </View>
+        <View style={estilos.itemEstatistica}>
+          <Text style={estilos.numeroEstatistica}>{dadosUsuario.recordeDias}</Text>
+          <Text style={estilos.labelEstatistica}>Recorde{'\n'}de Dias</Text>
+        </View>
+        <View style={estilos.itemEstatistica}>
+          <Text style={estilos.numeroEstatistica}>{dadosUsuario.totalAtividades}</Text>
+          <Text style={estilos.labelEstatistica}>Total de{'\n'}Atividades</Text>
+        </View>
+      </View>
+    </View>
 
-
-  const fazerLogout = async () => {
-    try {
-      await signOut(auth);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível sair da conta');
-    }
-  };
-
-  return (
-    <ScrollView style={estilos.container}>
-      {/* Header do Perfil */}
-      <View style={estilos.headerPerfil}>
-        <TouchableOpacity
-        style={estilos.avatarContainer}
-        onPress={() => Alert.alert('Em breve', 'Funcionalidade de foto será implementada')}
-        >
-            <Text style={estilos.avatar}>👤</Text>
+    {/* Seção de Informações */}
+    <View style={estilos.secaoInformacoes}>
+      <Text style={estilos.tituloSecao}>Informações</Text>
+      <View style={estilos.cardInformacoes}>
+        <View style={estilos.itemInformacao}>
+          <Text style={estilos.labelInformacao}>Nome:</Text>
+          <View style={estilos.valorComIcone}>
+            <Text style={estilos.valorInformacao}>{dadosUsuario.nome}</Text>
+            <TouchableOpacity 
+              style={estilos.iconeEditar}
+              onPress={() => abrirModalEdicao('nome', dadosUsuario.nome)}
+            >
+              <Text style={estilos.textoIconeEditar}>✏️</Text>
             </TouchableOpacity>
-
-        <Text style={estilos.nomeUsuario}>{dadosUsuario.nome}</Text>
-        <Text style={estilos.emailUsuario}>{dadosUsuario.email}</Text>
-      </View>
-
-      {/* Estatísticas */}
-      <View style={estilos.secaoEstatisticas}>
-        <Text style={estilos.tituloSecao}>📊 Suas Estatísticas</Text>
-        
-        <View style={estilos.cardEstatistica}>
-          <View style={estilos.itemEstatistica}>
-            <Text style={estilos.numeroEstatistica}>{dadosUsuario.diasConsecutivos}</Text>
-            <Text style={estilos.labelEstatistica}>Dias consecutivos</Text>
-          </View>
-          
-          <View style={estilos.itemEstatistica}>
-            <Text style={estilos.numeroEstatistica}>{dadosUsuario.recordeDias}</Text>
-            <Text style={estilos.labelEstatistica}>Recorde de dias</Text>
-          </View>
-          
-          <View style={estilos.itemEstatistica}>
-            <Text style={estilos.numeroEstatistica}>{dadosUsuario.totalAtividades}</Text>
-            <Text style={estilos.labelEstatistica}>Total de atividades</Text>
           </View>
         </View>
-      </View>
-
-      {/* Informações da Conta */}
-      <View style={estilos.secaoInformacoes}>
-        <Text style={estilos.tituloSecao}>ℹ️ Informações da Conta</Text>
         
-        <View style={estilos.cardInformacoes}>
-          
-          <View style={estilos.itemInformacao}>
-  <Text style={estilos.labelInformacao}>Nome:</Text>
-  <View style={estilos.valorComIcone}>
-    <Text style={estilos.valorInformacao}>{dadosUsuario.nome}</Text>
-    <TouchableOpacity 
-      style={estilos.iconeEditar}
-      onPress={() => abrirModalEdicao('nome', dadosUsuario.nome)}
-    >
-      <Text style={estilos.textoIconeEditar}>✏️</Text>
-    </TouchableOpacity>
-  </View>
-</View>
-
-
-          
-          <View style={estilos.itemInformacao}>
-  <Text style={estilos.labelInformacao}>Email:</Text>
-  <View style={estilos.valorComIcone}>
-    <Text style={estilos.valorInformacao}>{dadosUsuario.email}</Text>
-    <TouchableOpacity 
-      style={estilos.iconeEditar}
-      onPress={() => abrirModalEdicao('email', dadosUsuario.email)}
-    >
-      <Text style={estilos.textoIconeEditar}>✏️</Text>
-    </TouchableOpacity>
-  </View>
-</View>
-
-
-          
-          <View style={estilos.itemInformacao}>
-            <Text style={estilos.labelInformacao}>Cadastro:</Text>
-            <Text style={estilos.valorInformacao}>{dadosUsuario.dataCadastro}</Text>
+        <View style={estilos.itemInformacao}>
+          <Text style={estilos.labelInformacao}>Email:</Text>
+          <View style={estilos.valorComIcone}>
+            <Text style={estilos.valorInformacao}>{dadosUsuario.email}</Text>
+            <TouchableOpacity 
+              style={estilos.iconeEditar}
+              onPress={() => abrirModalEdicao('email', dadosUsuario.email)}
+            >
+              <Text style={estilos.textoIconeEditar}>✏️</Text>
+            </TouchableOpacity>
           </View>
         </View>
+        
+        <View style={estilos.itemInformacao}>
+          <Text style={estilos.labelInformacao}>Membro desde:</Text>
+          <Text style={estilos.valorInformacao}>{dadosUsuario.dataCadastro}</Text>
+        </View>
       </View>
+    </View>
 
-      {/* Botões de Ação */}
-      <View style={estilos.secaoBotoes}>
-        <TouchableOpacity
+    {/* Seção de Botões */}
+    <View style={estilos.secaoBotoes}>
+      <TouchableOpacity 
         style={estilos.botaoAcao}
         onPress={abrirModalAlterarSenha}
-        >
-          <Text style={estilos.textoBotaoAcao}>🔐 Alterar Senha</Text>
-          </TouchableOpacity>
-
-
-        <TouchableOpacity 
-          style={estilos.botaoSair}
-          onPress={confirmarLogout}
-        >
-          <Text style={estilos.textoBotaoSair}>🚪 Sair da Conta</Text>
-        </TouchableOpacity>
-      </View>
-            {/* Modal de Edição */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalEdicao.visivel}
-        onRequestClose={fecharModalEdicao}
       >
-        <View style={estilos.modalOverlay}>
-          <View style={estilos.modalContainer}>
-            <Text style={estilos.modalTitulo}>
-              {modalEdicao.tipo === 'nome' ? 'Editar Nome' : 'Editar Email'}
-            </Text>
+        <Text style={estilos.textoBotaoAcao}>🔐 Alterar Senha</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={estilos.botaoSair}
+        onPress={confirmarLogout}
+      >
+        <Text style={estilos.textoBotaoSair}>🚪 Sair da Conta</Text>
+      </TouchableOpacity>
+    </View>
+    
+    {/* Modal de Edição (Nome/Email) */}
+    <Modal
+      visible={modalEdicao.visivel}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={fecharModalEdicao}
+    >
+      <View style={estilos.modalOverlay}>
+        <View style={estilos.modalContainer}>
+          <Text style={estilos.modalTitulo}>
+            {modalEdicao.tipo === 'nome' ? 'Editar Nome' : 'Editar Email'}
+          </Text>
+          
+          <TextInput
+            style={estilos.modalInput}
+            value={modalEdicao.valor}
+            onChangeText={(texto) => setModalEdicao(prev => ({ ...prev, valor: texto }))}
+            placeholder={modalEdicao.tipo === 'nome' ? 'Digite o novo nome' : 'Digite o novo email'}
+            keyboardType={modalEdicao.tipo === 'email' ? 'email-address' : 'default'}
+            autoFocus={true}
+            editable={!carregando}
+          />
+          
+          <View style={estilos.modalBotoes}>
+            <TouchableOpacity 
+              style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
+              onPress={fecharModalEdicao}
+              disabled={carregando}
+            >
+              <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
+            </TouchableOpacity>
             
-            <TextInput
-              style={estilos.modalInput}
-              value={modalEdicao.valor}
-              onChangeText={(texto) => setModalEdicao(prev => ({ ...prev, valor: texto }))}
-              placeholder={modalEdicao.tipo === 'nome' ? 'Digite seu nome' : 'Digite seu email'}
-              keyboardType={modalEdicao.tipo === 'email' ? 'email-address' : 'default'}
-              autoCapitalize={modalEdicao.tipo === 'email' ? 'none' : 'words'}
-            />
-            
-            <View style={estilos.modalBotoes}>
-              <TouchableOpacity 
-                style={estilos.botaoModalCancelar}
-                onPress={fecharModalEdicao}
-              >
-                <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={estilos.botaoModalConfirmar}
-                onPress={confirmarEdicao}
-              >
+            <TouchableOpacity 
+              style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
+              onPress={confirmarEdicao}
+              disabled={carregando}
+            >
+              {carregando ? (
+                <ActivityIndicator size="small" color={cores.branco} />
+              ) : (
                 <Text style={estilos.textoBotaoModalConfirmar}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-            {/* Modal de Senha */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalSenha.visivel}
-        onRequestClose={fecharModalSenha}
-      >
-        <View style={estilos.modalOverlay}>
-          <View style={estilos.modalContainer}>
-            <Text style={estilos.modalTitulo}>Confirme sua senha</Text>
-            <Text style={estilos.modalSubtitulo}>
-              Por segurança, digite sua senha atual para alterar o email:
-            </Text>
+      </View>
+    </Modal>
+
+    {/* Modal de Confirmação de Senha para Email */}
+    <Modal
+      visible={modalSenha.visivel}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={fecharModalSenha}
+    >
+      <View style={estilos.modalOverlay}>
+        <View style={estilos.modalContainer}>
+          <Text style={estilos.modalTitulo}>Confirme sua senha</Text>
+          <Text style={estilos.modalSubtitulo}>
+            Para alterar o email, digite sua senha atual:
+          </Text>
+          
+          <TextInput
+            style={estilos.modalInput}
+            value={modalSenha.senha}
+            onChangeText={(senha) => setModalSenha(prev => ({ ...prev, senha }))}
+            placeholder="Digite sua senha atual"
+            secureTextEntry={true}
+            autoFocus={true}
+            editable={!carregando}
+          />
+          
+          <View style={estilos.modalBotoes}>
+            <TouchableOpacity 
+              style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
+              onPress={fecharModalSenha}
+              disabled={carregando}
+            >
+              <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
+            </TouchableOpacity>
             
-            <TextInput
-              style={estilos.modalInput}
-              value={modalSenha.senha}
-              onChangeText={(senha) => setModalSenha(prev => ({ ...prev, senha }))}
-              placeholder="Digite sua senha atual"
-              secureTextEntry={true}
-              autoFocus={true}
-            />
-            
-            <View style={estilos.modalBotoes}>
-              <TouchableOpacity 
-                style={estilos.botaoModalCancelar}
-                onPress={fecharModalSenha}
-              >
-                <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={estilos.botaoModalConfirmar}
-                onPress={confirmarSenha}
-              >
+            <TouchableOpacity 
+              style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
+              onPress={confirmarSenha}
+              disabled={carregando}
+            >
+              {carregando ? (
+                <ActivityIndicator size="small" color={cores.branco} />
+              ) : (
                 <Text style={estilos.textoBotaoModalConfirmar}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-            {/* Modal de Alterar Senha */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalAlterarSenha.visivel}
-        onRequestClose={fecharModalAlterarSenha}
-      >
-        <View style={estilos.modalOverlay}>
-          <View style={estilos.modalContainer}>
-            {modalAlterarSenha.etapa === 'confirmar' ? (
-              <>
-                <Text style={estilos.modalTitulo}>Confirme sua senha atual</Text>
-                <Text style={estilos.modalSubtitulo}>
-                  Para sua segurança, digite sua senha atual:
-                </Text>
+      </View>
+    </Modal>
+
+    {/* Modal de Alterar Senha */}
+    <Modal
+      visible={modalAlterarSenha.visivel}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={fecharModalAlterarSenha}
+    >
+      <View style={estilos.modalOverlay}>
+        <View style={estilos.modalContainer}>
+          <Text style={estilos.modalTitulo}>Alterar Senha</Text>
+          
+          {modalAlterarSenha.etapa === 'confirmar' ? (
+            // Primeira etapa: Confirmar senha atual
+            <>
+              <Text style={estilos.modalSubtitulo}>
+                Para sua segurança, digite sua senha atual:
+              </Text>
+              
+              <TextInput
+                style={estilos.modalInput}
+                value={modalAlterarSenha.senhaAtual}
+                onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, senhaAtual: senha }))}
+                placeholder="Digite sua senha atual"
+                secureTextEntry={true}
+                autoFocus={true}
+                editable={!carregando}
+              />
+              
+              <View style={estilos.modalBotoes}>
+                <TouchableOpacity 
+                  style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
+                  onPress={fecharModalAlterarSenha}
+                  disabled={carregando}
+                >
+                  <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
+                </TouchableOpacity>
                 
-                <TextInput
-                  style={estilos.modalInput}
-                  value={modalAlterarSenha.senhaAtual}
-                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, senhaAtual: senha }))}
-                  placeholder="Digite sua senha atual"
-                  secureTextEntry={true}
-                  autoFocus={true}
-                />
+                <TouchableOpacity 
+                  style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
+                  onPress={confirmarSenhaAtual}
+                  disabled={carregando}
+                >
+                  {carregando ? (
+                    <ActivityIndicator size="small" color={cores.branco} />
+                  ) : (
+                    <Text style={estilos.textoBotaoModalConfirmar}>Continuar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            // Segunda etapa: Definir nova senha
+            <>
+              <Text style={estilos.modalSubtitulo}>
+                Digite sua nova senha (mínimo 6 caracteres):
+              </Text>
+              
+              <TextInput
+                style={estilos.modalInput}
+                value={modalAlterarSenha.novaSenha}
+                onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, novaSenha: senha }))}
+                placeholder="Digite a nova senha"
+                secureTextEntry={true}
+                autoFocus={true}
+                editable={!carregando}
+              />
+              
+              <TextInput
+                style={estilos.modalInput}
+                value={modalAlterarSenha.confirmarNovaSenha}
+                onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, confirmarNovaSenha: senha }))}
+                placeholder="Confirme a nova senha"
+                secureTextEntry={true}
+                editable={!carregando}
+              />
+              
+              <View style={estilos.modalBotoes}>
+                <TouchableOpacity 
+                  style={[estilos.botaoModalCancelar, carregando && estilos.botaoDesabilitado]}
+                  onPress={voltarParaSenhaAtual}
+                  disabled={carregando}
+                >
+                  <Text style={estilos.textoBotaoModalCancelar}>Voltar</Text>
+                </TouchableOpacity>
                 
-                <View style={estilos.modalBotoes}>
-                  <TouchableOpacity 
-                    style={estilos.botaoModalCancelar}
-                    onPress={fecharModalAlterarSenha}
-                  >
-                    <Text style={estilos.textoBotaoModalCancelar}>Cancelar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={estilos.botaoModalConfirmar}
-                    onPress={confirmarSenhaAtual}
-                  >
-                    <Text style={estilos.textoBotaoModalConfirmar}>Confirmar</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <>
-                <Text style={estilos.modalTitulo}>Definir nova senha</Text>
-                <Text style={estilos.modalSubtitulo}>
-                  A nova senha deve ter pelo menos 6 caracteres (números ou letras):
-                </Text>
-                
-                <TextInput
-                  style={estilos.modalInput}
-                  value={modalAlterarSenha.novaSenha}
-                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, novaSenha: senha }))}
-                  placeholder="Digite a nova senha"
-                  secureTextEntry={true}
-                  autoFocus={true}
-                />
-                
-                <TextInput
-                  style={estilos.modalInput}
-                  value={modalAlterarSenha.confirmarNovaSenha}
-                  onChangeText={(senha) => setModalAlterarSenha(prev => ({ ...prev, confirmarNovaSenha: senha }))}
-                  placeholder="Confirme a nova senha"
-                  secureTextEntry={true}
-                />
-                
-                <View style={estilos.modalBotoes}>
-                  <TouchableOpacity 
-                    style={estilos.botaoModalCancelar}
-                    onPress={voltarParaSenhaAtual}
-                  >
-                    <Text style={estilos.textoBotaoModalCancelar}>Voltar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={estilos.botaoModalConfirmar}
-                    onPress={salvarNovaSenha}
-                  >
+                <TouchableOpacity 
+                  style={[estilos.botaoModalConfirmar, carregando && estilos.botaoDesabilitado]}
+                  onPress={salvarNovaSenha}
+                  disabled={carregando}
+                >
+                  {carregando ? (
+                    <ActivityIndicator size="small" color={cores.branco} />
+                  ) : (
                     <Text style={estilos.textoBotaoModalConfirmar}>Salvar</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
-      </Modal>
+      </View>
+    </Modal>
 
-
-    </ScrollView>
-    );
-  }
+    {/* Loading Overlay */}
+    {carregando && (
+      <View style={estilos.loadingOverlay}>
+        <View style={estilos.loadingContainer}>
+          <ActivityIndicator size="large" color={cores.primaria} />
+          <Text style={estilos.loadingTexto}>Carregando...</Text>
+        </View>
+      </View>
+    )}
+  </ScrollView>
+);
+}
 
 const estilos = StyleSheet.create({
   container: {
@@ -771,7 +811,7 @@ const estilos = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-    valorComIcone: {
+  valorComIcone: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
@@ -784,23 +824,6 @@ const estilos = StyleSheet.create({
   textoIconeEditar: {
     fontSize: 16,
   },
-  
-  /*edicaoNome: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  inputEdicao: {
-    backgroundColor: cores.branco,
-    borderWidth: 1,
-    borderColor: cores.primaria,
-    borderRadius: 5,
-    padding: 10,
-    fontSize: 16,
-    color: cores.texto,
-    textAlign: 'right',
-  },
-  */
-   // Estilos do Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -865,12 +888,42 @@ const estilos = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-    modalSubtitulo: {
+  modalSubtitulo: {
     fontSize: 14,
     color: cores.textoSecundario,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
   },
-
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: cores.branco,
+    borderRadius: 15,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: cores.sombra,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  loadingTexto: {
+    marginTop: 15,
+    fontSize: 16,
+    color: cores.texto,
+    fontWeight: '600',
+  },
+  botaoDesabilitado: {
+    opacity: 0.6,
+  },
 });

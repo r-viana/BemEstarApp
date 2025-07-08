@@ -3,6 +3,104 @@ import { buscarAtividadesDoUsuario } from './AtividadeService';
 // Atividades que podem ter distância
 const ATIVIDADES_COM_DISTANCIA = ['Caminhada & Corrida', 'Ciclismo', 'Natação'];
 
+// Função para calcular streak (dias consecutivos) real
+export const calcularStreakAtual = async () => {
+  try {
+    console.log('Calculando streak atual...');
+    const atividades = await buscarAtividadesDoUsuario();
+    
+    if (atividades.length === 0) {
+      return {
+        diasConsecutivos: 0,
+        recordeDias: 0,
+        ultimaAtividade: null
+      };
+    }
+// Ordenar atividades por data (mais recente primeiro)
+    const atividadesOrdenadas = atividades.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    // Agrupar atividades por dia (ignorar horário)
+    const diasComAtividade = new Set();
+    atividadesOrdenadas.forEach(atividade => {
+      const dataString = atividade.data.toISOString().split('T')[0]; // YYYY-MM-DD
+      diasComAtividade.add(dataString);
+    });
+
+    // Converter para array e ordenar (mais recente primeiro)
+    const diasUnicos = Array.from(diasComAtividade).sort((a, b) => new Date(b) - new Date(a));
+
+    // Calcular streak atual
+    let streakAtual = 0;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zerar horário para comparação só de data
+    
+    for (let i = 0; i < diasUnicos.length; i++) {
+      const diaAtividade = new Date(diasUnicos[i]);
+      const diferencaDias = Math.floor((hoje - diaAtividade) / (1000 * 60 * 60 * 24));
+      
+      if (i === 0) {
+        // Primeira atividade - deve ser hoje ou ontem para contar streak
+        if (diferencaDias <= 1) {
+          streakAtual = 1;
+        } else {
+          break; // Streak quebrado
+        }
+      } else {
+        // Próximas atividades devem ser consecutivas
+        const diaAnterior = new Date(diasUnicos[i - 1]);
+        const diferencaEntreDias = Math.floor((diaAnterior - diaAtividade) / (1000 * 60 * 60 * 24));
+        
+        if (diferencaEntreDias === 1) {
+          streakAtual++;
+        } else {
+          break; // Streak quebrado
+        }
+      }
+    }
+    
+    // Calcular recorde histórico (maior sequência já alcançada)
+    let recordeHistorico = 0;
+    let streakTemporario = 0;
+    
+    // Percorrer todos os dias únicos para encontrar a maior sequência
+    for (let i = diasUnicos.length - 1; i >= 0; i--) {
+      if (i === diasUnicos.length - 1) {
+        streakTemporario = 1;
+      } else {
+        const diaAtual = new Date(diasUnicos[i]);
+        const diaAnterior = new Date(diasUnicos[i + 1]);
+        const diferencaDias = Math.floor((diaAtual - diaAnterior) / (1000 * 60 * 60 * 24));
+        
+        if (diferencaDias === 1) {
+          streakTemporario++;
+        } else {
+          recordeHistorico = Math.max(recordeHistorico, streakTemporario);
+          streakTemporario = 1;
+        }
+      }
+    }
+    recordeHistorico = Math.max(recordeHistorico, streakTemporario);
+    
+    const resultado = {
+      diasConsecutivos: streakAtual,
+      recordeDias: Math.max(recordeHistorico, streakAtual), // Recorde nunca pode ser menor que streak atual
+      ultimaAtividade: atividadesOrdenadas[0]?.data || null,
+      totalDiasAtivos: diasUnicos.length
+    };
+
+    console.log('Streak calculado:', resultado);
+    return resultado;
+
+  } catch (error) {
+    console.error('Erro ao calcular streak:', error);
+    return {
+      diasConsecutivos: 0,
+      recordeDias: 0,
+      ultimaAtividade: null
+    };
+  }
+};
+
 // Função auxiliar para formatar tempo
 const formatarTempo = (minutos) => {
   if (minutos < 60) {

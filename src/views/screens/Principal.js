@@ -4,7 +4,7 @@ import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { signOut } from 'firebase/auth';
 import { gerarIniciais, gerarCorAvatar } from '../../services/AvatarService';
-import { obterEstatisticasComCache } from '../../services/EstatisticasService';
+import { obterEstatisticasComCache, calcularStreakAtual } from '../../services/EstatisticasService';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function Principal({ navigation }) {
@@ -45,9 +45,10 @@ const carregarDadosUsuario = async () => {
     if (usuario) {
       // Dados básicos do usuário
       const nome = usuario.displayName || usuario.email.split('@')[0];
+      const primeiroNome = usuario.displayName.split(' ')[0];
       const email = usuario.email;
       
-      setNomeUsuario(nome);
+      setNomeUsuario(primeiroNome);
       setEmailUsuario(email);
       
       // Gerar avatar com iniciais
@@ -55,25 +56,31 @@ const carregarDadosUsuario = async () => {
       const corFundo = gerarCorAvatar(nome);
       setDadosAvatar({ iniciais, corFundo });
       
-      // Carregar estatísticas reais
+      // Carregar estatísticas e streak real
       try {
-        const estatisticas = await obterEstatisticasComCache();
-        if (estatisticas && estatisticas.gerais && estatisticas.gerais.totalAtividades > 0) {
-          // Tem atividades - usar dados reais
-          setTotalAtividades(estatisticas.gerais.totalAtividades);
+        const [estatisticas, streakData] = await Promise.all([
+          obterEstatisticasComCache(),
+          calcularStreakAtual() // Nova função que você criou
+        ]);
         
-  const diasEstimados = Math.min(estatisticas.gerais.totalAtividades, 30);// Máximo 30 dias
-  setDiasConsecutivos(diasEstimados);
-  setRecordeDias(Math.max(diasEstimados, 30)); // Recorde é no mínimo o atual
-  } else {
-          // Usuário novo - sem atividades
+        if (estatisticas && estatisticas.gerais) {
+          setTotalAtividades(estatisticas.gerais.totalAtividades);
+        } else {
           setTotalAtividades(0);
+        }
+        
+        // Usar dados reais do streak
+        if (streakData) {
+          setDiasConsecutivos(streakData.diasConsecutivos);
+          setRecordeDias(streakData.recordeDias);
+        } else {
           setDiasConsecutivos(0);
           setRecordeDias(0);
         }
+        
       } catch (error) {
-        console.log('Erro ao carregar estatísticas:', error);
-        // Fallback - usuário novo
+        console.log('Erro ao carregar estatísticas/streak:', error);
+        // Fallback - usuário novo ou erro
         setTotalAtividades(0);
         setDiasConsecutivos(0);
         setRecordeDias(0);

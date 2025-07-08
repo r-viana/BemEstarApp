@@ -55,6 +55,7 @@ const [dadosAvatar, setDadosAvatar] = useState({
           totalAtividades: 0  // Estes podem ser carregados de outro lugar, se houver
         });
         const nome = usuario.displayName || 'Usuário';
+        const primeiroNome = usuario.displayName.split(' ')[0];
         const iniciais = gerarIniciais(nome);
         const corFundo = gerarCorAvatar(nome);
     setDadosAvatar({ iniciais, corFundo });

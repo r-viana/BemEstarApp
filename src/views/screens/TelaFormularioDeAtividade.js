@@ -1,8 +1,7 @@
-    // src/views/screens/TelaFormularioDeAtividade.js
     import React from 'react';
     import { View, StyleSheet, Alert } from 'react-native';
     import { useNavigation, useRoute } from '@react-navigation/native';
-    import FormularioDeAtividade from '../../components/FormularioDeAtividade'; // Ajuste o caminho se necessário
+    import FormularioDeAtividade from '../components/FormularioDeAtividade'
     import { cores } from '../../utils/Cores';
 
     const TelaFormularioDeAtividade = () => { // Renomeado para seguir o nome do arquivo

@@ -624,7 +624,7 @@ botaoExcluir: {
   paddingHorizontal: 8,
   paddingVertical: 4,
   borderRadius: 6,
-  backgroundColor: 'rgba(255, 0, 0, 0.1)',
+  backgroundColor: '#ff0000',
   marginLeft: 8,
 },
 iconeLixeira: {

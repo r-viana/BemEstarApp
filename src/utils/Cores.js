@@ -33,6 +33,13 @@ export const cores = {
   // Sombras
   sombra: '#000000',
   sombraOpacidade: 0.07,
+
+  //toggle botão
+
+  trackerDesligada:'#9c9274',       
+trackerLigada:  '#98cb9c',
+botaoDesligado:'#5f5d5d',            
+botaoLigado:'#314e4e',            
 };
 
 // Exemplo de tema alternativo (para usar no futuro)

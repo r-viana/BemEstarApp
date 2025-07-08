@@ -6,6 +6,8 @@ import { View, Text, TouchableOpacity, StyleSheet,
 import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { signOut, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { gerarIniciais, gerarCorAvatar } from '../../services/AvatarService';
+
 
 import EditarNome from '../components/EditarNome';
 import EditarEmail from '../components/EditarEmail';
@@ -34,6 +36,11 @@ const [dadosUsuario, setDadosUsuario] = useState({
   totalAtividades: 0
 });
 
+const [dadosAvatar, setDadosAvatar] = useState({
+  iniciais: 'U',
+  corFundo: cores.primaria
+});
+
 
   useEffect(() => {
     const carregarDadosUsuario = () => {
@@ -47,6 +54,10 @@ const [dadosUsuario, setDadosUsuario] = useState({
           recordeDias: 0,     // Estes podem ser carregados de outro lugar, se houver
           totalAtividades: 0  // Estes podem ser carregados de outro lugar, se houver
         });
+        const nome = usuario.displayName || 'Usuário';
+        const iniciais = gerarIniciais(nome);
+        const corFundo = gerarCorAvatar(nome);
+    setDadosAvatar({ iniciais, corFundo });
         // Se você tiver dados adicionais do usuário em Firestore/Realtime DB, carregue-os aqui também
         // Ex: carregarDadosAdicionaisDoBanco(usuario.uid);
       } else {
@@ -90,6 +101,10 @@ const [dadosUsuario, setDadosUsuario] = useState({
           recordeDias: 45,
           totalAtividades: 123
         });
+        const iniciais = gerarIniciais(nome);
+        const corFundo = gerarCorAvatar(nome);
+        setDadosAvatar({ iniciais, corFundo });
+        
       }
     } catch (error) {
       console.log('Erro ao carregar dados:', error);
@@ -258,14 +273,36 @@ const voltarParaSenhaAtual = () => {
 
 return (
   <ScrollView style={estilos.container}>
-    {/* Header do Perfil */}
-    <View style={estilos.headerPerfil}>
-      <View style={estilos.avatarContainer}>
-        <Text style={estilos.avatar}>👤</Text>
+    {/* Header com Avatar - Igual ao Principal */}
+<View style={estilos.headerPerfil}>
+  <TouchableOpacity 
+    style={estilos.areaUsuario}
+    onPress={() => navigation.goBack()} // Voltar para a tela anterior
+    activeOpacity={0.7}
+  > 
+    <View style={estilos.avatarContainer}>
+      <View style={[estilos.avatarCirculo, { backgroundColor: dadosAvatar.corFundo }]}>
+        <Text style={estilos.avatarTexto}>{dadosAvatar.iniciais}</Text>
       </View>
+    </View>
+    
+    <View style={estilos.infoUsuario}>
       <Text style={estilos.nomeUsuario}>{dadosUsuario.nome}</Text>
       <Text style={estilos.emailUsuario}>{dadosUsuario.email}</Text>
     </View>
+  </TouchableOpacity>
+  
+  <View style={estilos.estatisticasHeader}>
+    <View style={estilos.estatisticaItem}>
+      <Text style={estilos.estatisticaValor}>🔥 {dadosUsuario.diasConsecutivos}</Text>
+      <Text style={estilos.estatisticaLabel}>dias</Text>
+    </View>
+    <View style={estilos.estatisticaItem}>
+      <Text style={estilos.estatisticaValor}>🏆 {dadosUsuario.recordeDias}</Text>
+      <Text style={estilos.estatisticaLabel}>recorde</Text>
+    </View>
+  </View>
+</View>
 
     {/* Seção de Estatísticas */}
     <View style={estilos.secaoEstatisticas}>
@@ -486,34 +523,29 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.fundo,
   },
   headerPerfil: {
-    backgroundColor: cores.primaria,
-    padding: 30,
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: cores.branco,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  avatar: {
-    fontSize: 40,
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 20,
+  paddingTop: 5,
+  paddingBottom: 5,
+  backgroundColor: cores.primaria,
+  shadowColor: cores.sombra,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
   nomeUsuario: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: cores.branco,
-    marginBottom: 5,
-  },
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: cores.branco,
+  marginBottom: 2,
+},
   emailUsuario: {
-    fontSize: 16,
-    color: cores.branco,
-    opacity: 0.9,
-  },
+  fontSize: 14,
+  color: cores.branco,
+  opacity: 0.9,
+},
   secaoEstatisticas: {
     margin: 20,
   },
@@ -601,6 +633,9 @@ const estilos = StyleSheet.create({
     color: cores.texto,
     fontWeight: '600',
   },
+  avatarContainer: {
+  marginRight: 15,
+},
   botaoSair: {
     backgroundColor: cores.perigo,
     padding: 18,
@@ -728,4 +763,51 @@ const estilos = StyleSheet.create({
   botaoDesabilitado: {
     opacity: 0.6,
   },
+  // Novos estilos para o header igual ao Principal
+areaUsuario: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+  paddingVertical: 5,
+  paddingRight: 10,
+},
+avatarCirculo: {
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 2,
+  borderColor: cores.branco,
+  shadowColor: cores.sombra,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 4,
+},
+avatarTexto: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: cores.branco,
+},
+infoUsuario: {
+  flex: 1,
+},
+estatisticasHeader: {
+  alignItems: 'flex-end',
+},
+estatisticaItem: {
+  alignItems: 'center',
+  marginBottom: 8,
+},
+estatisticaValor: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: cores.branco,
+},
+estatisticaLabel: {
+  fontSize: 10,
+  color: cores.branco,
+  opacity: 0.8,
+},
 });

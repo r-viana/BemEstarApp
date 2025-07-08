@@ -58,9 +58,13 @@ export default function Navegacao() {
         options={{
           title: 'Meu Perfil',
           headerShown: true,
-          headerStyle: { backgroundColor: cores.primaria },
+          headerStyle: { 
+            backgroundColor: cores.primaria, 
+            height: 40 },
           headerTintColor: cores.branco,
-          headerTitleStyle: { fontWeight: 'bold'}
+          headerTitleStyle: { fontWeight: 'bold',
+            fontSize: 18
+          }
         }}
         />
         <Stack.Screen

@@ -5,6 +5,7 @@ import { auth } from '../../services/FirebaseConfig';
 import { signOut } from 'firebase/auth';
 import { gerarIniciais, gerarCorAvatar } from '../../services/AvatarService';
 import { obterEstatisticasComCache } from '../../services/EstatisticasService';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function Principal({ navigation }) {
   const [nomeUsuario, setNomeUsuario] = useState('');
@@ -17,66 +18,99 @@ export default function Principal({ navigation }) {
     corFundo: cores.primaria
   });
 
-  useEffect(() => {
+  // Carregar dados quando a tela ganhar foco
+useFocusEffect(
+  React.useCallback(() => {
     carregarDadosUsuario();
-  }, []);
+  }, [])
+);
 
-  const carregarDadosUsuario = async () => {
-    try {
-      const usuario = auth.currentUser;
-      if (usuario) {
-        // --------Dados básicos do usuário--------
-        const nome = usuario.displayName || usuario.email.split('@')[0];
-        const email = usuario.email;
+// Manter o listener de autenticação também
+useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (user) {
+      carregarDadosUsuario();
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
+
+
+
+
+const carregarDadosUsuario = async () => {
+  try {
+    const usuario = auth.currentUser;
+    if (usuario) {
+      // Dados básicos do usuário
+      const nome = usuario.displayName || usuario.email.split('@')[0];
+      const email = usuario.email;
+      
+      setNomeUsuario(nome);
+      setEmailUsuario(email);
+      
+      // Gerar avatar com iniciais
+      const iniciais = gerarIniciais(nome);
+      const corFundo = gerarCorAvatar(nome);
+      setDadosAvatar({ iniciais, corFundo });
+      
+      // Carregar estatísticas reais
+      try {
+        const estatisticas = await obterEstatisticasComCache();
+        if (estatisticas && estatisticas.gerais && estatisticas.gerais.totalAtividades > 0) {
+          // Tem atividades - usar dados reais
+          setTotalAtividades(estatisticas.gerais.totalAtividades);
         
-        setNomeUsuario(nome);
-        setEmailUsuario(email);
-        
-        // --------Gerar avatar com iniciais--------
-        const iniciais = gerarIniciais(nome);
-        const corFundo = gerarCorAvatar(nome);
-        setDadosAvatar({ iniciais, corFundo });
-        
-        // --------Carregar estatísticas reais--------
-        try {
-          const estatisticas = await obterEstatisticasComCache();
-          if (estatisticas && estatisticas.gerais) {
-            setTotalAtividades(estatisticas.gerais.totalAtividades);
-            // --------Por enquanto, manter dados temporários para streak--------
-            setDiasConsecutivos(17);
-            setRecordeDias(45);
-          } else {
-            // --------Sem atividades--------
-            setTotalAtividades(0);
-            setDiasConsecutivos(0);
-            setRecordeDias(0);
-          }
-        } catch (error) {
-          console.log('Erro ao carregar estatísticas:', error);
-          // --------Usar dados padrão--------
+  const diasEstimados = Math.min(estatisticas.gerais.totalAtividades, 30);// Máximo 30 dias
+  setDiasConsecutivos(diasEstimados);
+  setRecordeDias(Math.max(diasEstimados, 30)); // Recorde é no mínimo o atual
+  } else {
+          // Usuário novo - sem atividades
           setTotalAtividades(0);
           setDiasConsecutivos(0);
           setRecordeDias(0);
         }
+      } catch (error) {
+        console.log('Erro ao carregar estatísticas:', error);
+        // Fallback - usuário novo
+        setTotalAtividades(0);
+        setDiasConsecutivos(0);
+        setRecordeDias(0);
       }
-    } catch (error) {
-      console.log('Erro ao carregar dados:', error);
     }
-  };
+  } catch (error) {
+    console.log('Erro ao carregar dados:', error);
+  }
+};
 
-  const obterMensagemMotivacional = () => {
-    const porcentagem = (diasConsecutivos / recordeDias) * 100;
-    
-    if (diasConsecutivos >= recordeDias) {
-      return "Parabéns! Novo recorde!";
-    } else if (porcentagem >= 80) {
-      return "Está quase lá!";
-    } else if (porcentagem >= 50) {
-      return "Você está indo bem!";
-    } else {
-      return "Vamos lá!";
-    }
-  };
+
+
+const obterMensagemMotivacional = () => {
+  if (totalAtividades === 0) {
+    return "Comece sua jornada hoje!";
+  }
+  
+  if (diasConsecutivos === 0) {
+    return "Hora de retomar o ritmo!";
+  }
+  
+  const porcentagem = recordeDias > 0 ? (diasConsecutivos / recordeDias) * 100 : 100;
+  
+  if (diasConsecutivos >= recordeDias) {
+    return "Parabéns! Novo recorde!";
+  } else if (porcentagem >= 80) {
+    return "Está quase lá!";
+  } else if (porcentagem >= 50) {
+    return "Você está indo bem!";
+  } else if (totalAtividades >= 25) {
+    return "Continue assim!";
+  } else if (totalAtividades >=5){
+    return "Vamos com tudo!";
+  } else {
+    return "Vamos lá!";
+  }
+};
 
   const fazerLogout = async () => {
     Alert.alert(
@@ -250,7 +284,7 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 30,
     backgroundColor: cores.primaria,
     shadowColor: cores.sombra,
     shadowOffset: { width: 0, height: 2 },
@@ -291,10 +325,10 @@ const estilos = StyleSheet.create({
     flex: 1,
   },
   nomeUsuario: {
-    fontSize: 18,
+    fontSize: 25,
     fontWeight: 'bold',
     color: cores.branco,
-    marginBottom: 2,
+    marginBottom: 2
   },
   emailUsuario: {
     fontSize: 14,

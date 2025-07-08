@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Modal, TextInput} from 'react-native';
+  ScrollView, Alert, Modal, TextInput, ActivityIndicator} from 'react-native';
 import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
-import { signOut, updateProfile, updatePassword } from 'firebase/auth';
+import { signOut, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 import EditarNome from '../components/EditarNome';
 import EditarEmail from '../components/EditarEmail';
@@ -355,13 +355,12 @@ return (
       <EditarEmail
         visivel={modalEditarEmailVisivel}
         fecharModal={() => setModalEditarEmailVisivel(false)}
-        emailAtual={dadosUsuario.email} // Passamos o email atual do usuário
-        aoEmailAtualizado={(novoEmail) => {
-          // Esta função será chamada pelo EditarEmail.js quando o email for atualizado com sucesso
-          // Aqui você pode querer atualizar o estado local 'dadosUsuario' no Perfil.js
-          // para refletir o novo email instantaneamente na tela.
+        emailAtual={dadosUsuario.email}
+        onSucesso={(novoEmail) => {
           setDadosUsuario(prev => ({ ...prev, email: novoEmail }));
-          Alert.alert('Sucesso', 'Seu email foi atualizado! Lembre-se de verificá-lo.');
+        }}
+        onLogout={() => {
+          fazerLogout();
         }}
       />
 

@@ -13,6 +13,7 @@ import Principal from '../views/screens/Principal';
 import RecuperarSenha from '../views/screens/RecuperarSenha';
 import VerificarEmail from '../views/screens/VerificarEmail';
 import HistoricoDeAtividades from '../views/screens/HistoricoDeAtividades';
+import Configuracoes from '../views/screens/Configuracoes';
 import TelaFormularioDeAtividade from '../views/screens/TelaFormularioDeAtividade';
 import Estatisticas from '../views/screens/Estatisticas';
 
@@ -126,6 +127,17 @@ export default function Navegacao() {
               backgroundColor: cores.primaria,
               paddingTop: 50
             },
+            headerTintColor: cores.branco,
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
+        />
+        <Stack.Screen
+          name="Configuracoes"
+          component={Configuracoes}
+          options={{
+            headerShown: true,
+            title: 'Configurações',
+            headerStyle: { backgroundColor: cores.primaria },
             headerTintColor: cores.branco,
             headerTitleStyle: { fontWeight: 'bold' }
           }}

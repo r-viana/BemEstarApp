@@ -4,7 +4,8 @@ import { cores } from '../../utils/Cores';
 import { auth } from '../../services/FirebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from 'firebase/auth';
 
-export default function EditarEmail({ visivel, emailAtual, fecharModal, onSucesso, carregando, setCarregando, onLogout }) {
+export default function EditarEmail({ visivel, emailAtual, fecharModal, onSucesso, onLogout }) {
+  const [carregando, setCarregando] = useState(false);
   const [modalEdicao, setModalEdicao] = useState({ visivel: false, tipo: '', valor: '' });
   const [modalSenha, setModalSenha] = useState({ visivel: false, senha: '' });
 

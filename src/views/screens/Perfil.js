@@ -1,5 +1,5 @@
 
-
+import { calcularStreakAtual } from '../../services/EstatisticasService';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, Modal, TextInput, ActivityIndicator} from 'react-native';
@@ -43,35 +43,45 @@ const [dadosAvatar, setDadosAvatar] = useState({
 
 
   useEffect(() => {
-    const carregarDadosUsuario = () => {
-      const usuario = auth.currentUser;
-      if (usuario) {
-        setDadosUsuario({
-          nome: usuario.displayName || 'Usuário',
-          email: usuario.email || 'N/A',
-          dataCadastro: usuario.metadata.creationTime ? new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR') : 'N/A',
-          diasConsecutivos: 0, // Estes podem ser carregados de outro lugar, se houver
-          recordeDias: 0,     // Estes podem ser carregados de outro lugar, se houver
-          totalAtividades: 0  // Estes podem ser carregados de outro lugar, se houver
-        });
-        const nome = usuario.displayName || 'Usuário';
-        const primeiroNome = usuario.displayName.split(' ')[0];
-        const iniciais = gerarIniciais(nome);
-        const corFundo = gerarCorAvatar(nome);
+    const carregarDadosUsuario = async () => {
+  const usuario = auth.currentUser;
+  if (usuario) {
+    const nome = usuario.displayName || 'Usuário';
+    const dataCadastro = usuario.metadata.creationTime 
+      ? new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR') 
+      : 'N/A';
+
+    // Carregar streak 
+    let streakData = { diasConsecutivos: 0, recordeDias: 0 };
+    try {
+      streakData = await calcularStreakAtual();
+    } catch (error) {
+      console.log('Erro ao carregar streak:', error);
+    }
+
+    setDadosUsuario({
+      nome: nome,
+      email: usuario.email || 'N/A',
+      dataCadastro: dataCadastro,
+      diasConsecutivos: streakData.diasConsecutivos || 0,
+      recordeDias: streakData.recordeDias || 0,
+      totalAtividades: 0
+    });
+    
+    const iniciais = gerarIniciais(nome);
+    const corFundo = gerarCorAvatar(nome);
     setDadosAvatar({ iniciais, corFundo });
-        // Se você tiver dados adicionais do usuário em Firestore/Realtime DB, carregue-os aqui também
-        // Ex: carregarDadosAdicionaisDoBanco(usuario.uid);
-      } else {
-        setDadosUsuario({
-          nome: '',
-          email: '',
-          dataCadastro: '',
-          diasConsecutivos: 0,
-          recordeDias: 0,
-          totalAtividades: 0
-        });
-      }
-    };
+  } else {
+    setDadosUsuario({
+      nome: '',
+      email: '',
+      dataCadastro: '',
+      diasConsecutivos: 0,
+      recordeDias: 0,
+      totalAtividades: 0
+    });
+  }
+};
 
     // Este listener garante que os dados do usuário sejam atualizados
     // sempre que o estado de autenticação mudar (login, logout, atualização de perfil)
@@ -85,32 +95,40 @@ const [dadosAvatar, setDadosAvatar] = useState({
 
 
 
-  const carregarDadosUsuario = async () => {
-    try {
-      const usuario = auth.currentUser;
-      if (usuario) {
-        const nome = usuario.displayName || usuario.email.split('@')[0];
-        const dataCadastro = usuario.metadata.creationTime 
-          ? new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR')
-          : 'Data não disponível';
+const carregarDadosUsuario = async () => {
+  try {
+    const usuario = auth.currentUser;
+    if (usuario) {
+      const nome = usuario.displayName || usuario.email.split('@')[0];
+      const dataCadastro = usuario.metadata.creationTime 
+        ? new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR')
+        : 'Data não disponível';
 
-        setDadosUsuario({
-          nome: nome,
-          email: usuario.email,
-          dataCadastro: dataCadastro,
-          diasConsecutivos: 17, // Dados temporários
-          recordeDias: 45,
-          totalAtividades: 123
-        });
-        const iniciais = gerarIniciais(nome);
-        const corFundo = gerarCorAvatar(nome);
-        setDadosAvatar({ iniciais, corFundo });
-        
+      // Carregar streak real
+      let streakData = { diasConsecutivos: 0, recordeDias: 0 };
+      try {
+        streakData = await calcularStreakAtual();
+      } catch (error) {
+        console.log('Erro ao carregar streak:', error);
       }
-    } catch (error) {
-      console.log('Erro ao carregar dados:', error);
+
+      setDadosUsuario({
+        nome: nome,
+        email: usuario.email,
+        dataCadastro: dataCadastro,
+        diasConsecutivos: streakData.diasConsecutivos || 0,
+        recordeDias: streakData.recordeDias || 0,
+        totalAtividades: 0 // TODO: Implementar contagem real de atividades
+      });
+      
+      const iniciais = gerarIniciais(nome);
+      const corFundo = gerarCorAvatar(nome);
+      setDadosAvatar({ iniciais, corFundo });
     }
-  };
+  } catch (error) {
+    console.log('Erro ao carregar dados:', error);
+  }
+};
 
   const fazerLogout = async () => {
     try {

@@ -30,33 +30,47 @@ export const calcularStreakAtual = async () => {
     const diasUnicos = Array.from(diasComAtividade).sort((a, b) => new Date(b) - new Date(a));
 
     // Calcular streak atual
-    let streakAtual = 0;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); // Zerar horário para comparação só de data
-    
-    for (let i = 0; i < diasUnicos.length; i++) {
-      const diaAtividade = new Date(diasUnicos[i]);
-      const diferencaDias = Math.floor((hoje - diaAtividade) / (1000 * 60 * 60 * 24));
+let streakAtual = 0;
+const agora = new Date();
+const hoje = new Date(agora);
+hoje.setHours(0, 0, 0, 0); // Início do dia atual
+
+for (let i = 0; i < diasUnicos.length; i++) {
+  const diaAtividade = new Date(diasUnicos[i]);
+  const diferencaMs = agora - diaAtividade;
+  const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
+  
+  if (i === 0) {
+    // Primeira atividade - verificar se é hoje ou se ainda está dentro do prazo
+    if (diferencaDias === 0) {
+      // Atividade foi hoje
+      streakAtual = 1;
+    } else if (diferencaDias === 1) {
+      // Atividade foi ontem - verificar se ainda estamos dentro das 23:59:59 do dia seguinte
+      const fimDoDiaSeguinte = new Date(diaAtividade);
+      fimDoDiaSeguinte.setDate(fimDoDiaSeguinte.getDate() + 1);
+      fimDoDiaSeguinte.setHours(23, 59, 59, 999);
       
-      if (i === 0) {
-        // Primeira atividade - deve ser hoje ou ontem para contar streak
-        if (diferencaDias <= 1) {
-          streakAtual = 1;
-        } else {
-          break; // Streak quebrado
-        }
+      if (agora <= fimDoDiaSeguinte) {
+        streakAtual = 1;
       } else {
-        // Próximas atividades devem ser consecutivas
-        const diaAnterior = new Date(diasUnicos[i - 1]);
-        const diferencaEntreDias = Math.floor((diaAnterior - diaAtividade) / (1000 * 60 * 60 * 24));
-        
-        if (diferencaEntreDias === 1) {
-          streakAtual++;
-        } else {
-          break; // Streak quebrado
-        }
+        break; // Streak quebrado - passou do prazo
       }
+    } else {
+      break; // Streak quebrado - atividade muito antiga
     }
+  } else {
+    // Próximas atividades devem ser consecutivas (diferença de exatamente 1 dia)
+    const diaAnterior = new Date(diasUnicos[i - 1]);
+    const diferencaEntreDias = Math.floor((diaAnterior - diaAtividade) / (1000 * 60 * 60 * 24));
+    
+    if (diferencaEntreDias === 1) {
+      streakAtual++;
+    } else {
+      break; // Streak quebrado
+    }
+  }
+}
     
     // Calcular recorde histórico (maior sequência já alcançada)
     let recordeHistorico = 0;

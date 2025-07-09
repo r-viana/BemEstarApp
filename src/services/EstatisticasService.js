@@ -7,7 +7,24 @@ const ATIVIDADES_COM_DISTANCIA = ['Caminhada & Corrida', 'Ciclismo', 'Natação'
 export const calcularStreakAtual = async () => {
   try {
     console.log('Calculando streak atual...');
+    
+    // Buscar atividades
     const atividades = await buscarAtividadesDoUsuario();
+    console.log('=== DEBUG STREAK ===');
+    console.log('Total atividades encontradas:', atividades.length);
+    console.log('Atividades com datas:', atividades.map(a => ({
+      tipo: a.tipo,
+      data: a.data.toLocaleDateString('pt-BR'),
+      dataISO: a.data.toISOString().split('T')[0]
+    })));
+    console.log('Atividades com datas DETALHADAS:', atividades.map(a => ({
+      tipo: a.tipo,
+      dataOriginal: a.data,
+      dataFormatada: a.data.toLocaleDateString('pt-BR'),
+      dataISO: a.data.toISOString(),
+      soData: a.data.toISOString().split('T')[0],
+      diaAtual: new Date().toISOString().split('T')[0]
+    })));
     
     if (atividades.length === 0) {
       return {
@@ -16,67 +33,79 @@ export const calcularStreakAtual = async () => {
         ultimaAtividade: null
       };
     }
-// Ordenar atividades por data (mais recente primeiro)
+
+    // Ordenar atividades por data (mais recente primeiro)
     const atividadesOrdenadas = atividades.sort((a, b) => new Date(b.data) - new Date(a.data));
 
     // Agrupar atividades por dia (ignorar horário)
     const diasComAtividade = new Set();
     atividadesOrdenadas.forEach(atividade => {
-      const dataString = atividade.data.toISOString().split('T')[0]; // YYYY-MM-DD
-      diasComAtividade.add(dataString);
-    });
+  // Usar UTC para evitar problemas de timezone
+
+    const dataUTC = new Date(atividade.data.getFullYear(), atividade.data.getMonth(), atividade.data.getDate());
+    const dataString = dataUTC.toISOString().split('T')[0]; // YYYY-MM-DD
+    console.log('Atividade data original:', atividade.data.toISOString(), 'convertida para:', dataString);
+    diasComAtividade.add(dataString);
+  });
 
     // Converter para array e ordenar (mais recente primeiro)
     const diasUnicos = Array.from(diasComAtividade).sort((a, b) => new Date(b) - new Date(a));
+    console.log('Dias únicos com atividade:', diasUnicos);
+    console.log('Quantidade de dias únicos:', diasUnicos.length);
 
     // Calcular streak atual
-let streakAtual = 0;
-const agora = new Date();
-const hoje = new Date(agora);
-hoje.setHours(0, 0, 0, 0); // Início do dia atual
+    let streakAtual = 0;
+    const agora = new Date();
+    const hoje = new Date(agora);
+    hoje.setHours(0, 0, 0, 0); // Início do dia atual
 
-for (let i = 0; i < diasUnicos.length; i++) {
-  const diaAtividade = new Date(diasUnicos[i]);
-  const diferencaMs = agora - diaAtividade;
-  const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
-  
-  if (i === 0) {
-    // Primeira atividade - verificar se é hoje ou se ainda está dentro do prazo
-    if (diferencaDias === 0) {
-      // Atividade foi hoje
-      streakAtual = 1;
-    } else if (diferencaDias === 1) {
-      // Atividade foi ontem - verificar se ainda estamos dentro das 23:59:59 do dia seguinte
-      const fimDoDiaSeguinte = new Date(diaAtividade);
-      fimDoDiaSeguinte.setDate(fimDoDiaSeguinte.getDate() + 1);
-      fimDoDiaSeguinte.setHours(23, 59, 59, 999);
+    for (let i = 0; i < diasUnicos.length; i++) {
+      const diaAtividade = new Date(diasUnicos[i]);
+      const diferencaMs = agora - diaAtividade;
+      const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
       
-      if (agora <= fimDoDiaSeguinte) {
-        streakAtual = 1;
-      } else {
-        break; // Streak quebrado - passou do prazo
-      }
+      console.log(`Dia ${i}: ${diasUnicos[i]}, diferença: ${diferencaDias} dias`);
+      
+      if (diferencaDias === i) {
+    // Dia está na posição correta para ser consecutivo
+    if (i === 0) {
+      // Primeira atividade deve ser hoje
+      streakAtual = 1;
+      console.log('Atividade foi hoje, streak = 1');
+    } else if (diferencaDias === 1 && i === 1) {
+      // Segunda atividade deve ser ontem (diferença de 1 dia)
+      streakAtual = 2;
+      console.log('Atividade foi ontem, streak = 2');
     } else {
-      break; // Streak quebrado - atividade muito antiga
+      // Próximas atividades: diferença deve ser exatamente i
+      streakAtual = i + 1;
+      console.log(`Dia consecutivo encontrado, streak = ${streakAtual}`);
+    }
+  } else if (i === 0 && diferencaDias === 1) {
+    // Primeira atividade foi ontem - ainda conta se estivermos no prazo
+    const fimDoDiaSeguinte = new Date(diaAtividade);
+    fimDoDiaSeguinte.setDate(fimDoDiaSeguinte.getDate() + 1);
+    fimDoDiaSeguinte.setHours(23, 59, 59, 999);
+    
+    if (agora <= fimDoDiaSeguinte) {
+      streakAtual = 1;
+      console.log('Atividade foi ontem mas ainda no prazo, streak = 1');
+    } else {
+      console.log('Atividade foi ontem mas passou do prazo, streak quebrado');
+      break;
     }
   } else {
-    // Próximas atividades devem ser consecutivas (diferença de exatamente 1 dia)
-    const diaAnterior = new Date(diasUnicos[i - 1]);
-    const diferencaEntreDias = Math.floor((diaAnterior - diaAtividade) / (1000 * 60 * 60 * 24));
-    
-    if (diferencaEntreDias === 1) {
-      streakAtual++;
-    } else {
-      break; // Streak quebrado
-    }
+    console.log(`Esperado diferença de ${i} dias, mas encontrado ${diferencaDias} dias - streak quebrado`);
+    break;
   }
-}
+
+      }
     
-    // Calcular recorde histórico (maior sequência já alcançada)
+
+    // Calcular recorde histórico
     let recordeHistorico = 0;
     let streakTemporario = 0;
     
-    // Percorrer todos os dias únicos para encontrar a maior sequência
     for (let i = diasUnicos.length - 1; i >= 0; i--) {
       if (i === diasUnicos.length - 1) {
         streakTemporario = 1;
@@ -97,12 +126,13 @@ for (let i = 0; i < diasUnicos.length; i++) {
     
     const resultado = {
       diasConsecutivos: streakAtual,
-      recordeDias: Math.max(recordeHistorico, streakAtual), // Recorde nunca pode ser menor que streak atual
+      recordeDias: Math.max(recordeHistorico, streakAtual),
       ultimaAtividade: atividadesOrdenadas[0]?.data || null,
       totalDiasAtivos: diasUnicos.length
     };
 
     console.log('Streak calculado:', resultado);
+    console.log('=== FIM DEBUG STREAK ===');
     return resultado;
 
   } catch (error) {
@@ -477,6 +507,7 @@ export default {
   calcularPeriodosMaisAtivos,
   calcularEstatisticasDistancia,
   calcularTodasEstatisticas,
+  calcularStreakAtual,
   obterEstatisticasComCache,
   limparCacheEstatisticas
 };

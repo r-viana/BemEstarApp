@@ -1,5 +1,6 @@
 
 import { calcularStreakAtual } from '../../services/EstatisticasService';
+import { buscarAtividadesDoUsuario } from '../../services/AtividadeService';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, Modal, TextInput, ActivityIndicator} from 'react-native';
@@ -52,21 +53,30 @@ const [dadosAvatar, setDadosAvatar] = useState({
       : 'N/A';
 
     // Carregar streak 
-    let streakData = { diasConsecutivos: 0, recordeDias: 0 };
-    try {
-      streakData = await calcularStreakAtual();
-    } catch (error) {
-      console.log('Erro ao carregar streak:', error);
-    }
+    // Carregar streak e total de atividades
+let streakData = { diasConsecutivos: 0, recordeDias: 0 };
+let totalAtividades = 0;
 
-    setDadosUsuario({
-      nome: nome,
-      email: usuario.email || 'N/A',
-      dataCadastro: dataCadastro,
-      diasConsecutivos: streakData.diasConsecutivos || 0,
-      recordeDias: streakData.recordeDias || 0,
-      totalAtividades: 0
-    });
+try {
+  const [streak, atividades] = await Promise.all([
+    calcularStreakAtual(),
+    buscarAtividadesDoUsuario()
+  ]);
+  
+  streakData = streak;
+  totalAtividades = atividades ? atividades.length : 0;
+} catch (error) {
+  console.log('Erro ao carregar dados:', error);
+}
+
+setDadosUsuario({
+  nome: nome,
+  email: usuario.email || 'N/A',
+  dataCadastro: dataCadastro,
+  diasConsecutivos: streakData.diasConsecutivos || 0,
+  recordeDias: streakData.recordeDias || 0,
+  totalAtividades: totalAtividades
+});
     
     const iniciais = gerarIniciais(nome);
     const corFundo = gerarCorAvatar(nome);
@@ -296,7 +306,7 @@ return (
 <View style={estilos.headerPerfil}>
   <TouchableOpacity 
     style={estilos.areaUsuario}
-    onPress={() => navigation.goBack()} // Voltar para a tela anterior
+    //onPress={() => navigation.goBack()} // Voltar para a tela anterior
     activeOpacity={0.7}
   > 
     <View style={estilos.avatarContainer}>

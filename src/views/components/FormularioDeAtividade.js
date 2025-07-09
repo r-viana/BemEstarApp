@@ -158,7 +158,13 @@ const FormularioDeAtividade = ({ onCancel, initialValues }) => {
             {
               text: 'OK',
               onPress: () => {
-                navigation.navigate('HistoricoDeAtividades');
+                navigation.reset({
+  index: 1,
+  routes: [
+    { name: 'Principal' },
+    { name: 'HistoricoDeAtividades' }
+  ],
+});
               }
             }
           ]
@@ -173,7 +179,13 @@ const FormularioDeAtividade = ({ onCancel, initialValues }) => {
             {
               text: 'OK',
               onPress: () => {
-                navigation.navigate('HistoricoDeAtividades');
+                navigation.reset({
+  index: 1,
+  routes: [
+    { name: 'Principal' },
+    { name: 'HistoricoDeAtividades' }
+  ],
+});
               }
             }
           ]

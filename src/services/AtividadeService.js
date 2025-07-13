@@ -11,6 +11,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { firestore, getUserId } from './FirebaseConfig';
+import { sincronizarAtividadesStrava } from './StravaService';
 
 // Mapeamento de ícones por tipo de atividade
 const ICONES_ATIVIDADES = {
@@ -241,6 +242,67 @@ export const formatarAtividadeParaExibicao = (atividade) => {
 };
 
 /**
+ * Sincronizar atividades do Strava
+ */
+export const sincronizarAtividadesDoStrava = async () => {
+  try {
+    console.log('Iniciando sincronização de atividades do Strava...');
+    
+    const resultado = await sincronizarAtividadesStrava(true);
+    
+    if (resultado.atividades && resultado.atividades.length > 0) {
+      // Salvar atividades do Strava no Firebase
+      const userId = getUserId();
+      
+      for (const atividadeStrava of resultado.atividades) {
+        // Verificar se atividade já existe
+        const q = query(
+          collection(firestore, COLECAO_ATIVIDADES),
+          where('userId', '==', userId),
+          where('stravaId', '==', atividadeStrava.stravaId)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          // Atividade não existe, criar nova
+          const atividadeParaSalvar = {
+            userId: userId,
+            tipo: atividadeStrava.tipo,
+            data: Timestamp.fromDate(atividadeStrava.data),
+            duracaoMinutos: atividadeStrava.duracaoMinutos,
+            local: atividadeStrava.local,
+            isOutdoor: atividadeStrava.isOutdoor,
+            distanciaKm: atividadeStrava.distanciaKm,
+            notas: atividadeStrava.notas,
+            criadoEm: Timestamp.now(),
+            atualizadoEm: Timestamp.now(),
+            // Dados específicos do Strava
+            stravaId: atividadeStrava.stravaId,
+            stravaType: atividadeStrava.stravaType,
+            stravaName: atividadeStrava.stravaName,
+            fonte: 'strava',
+            sincronizadoEm: Timestamp.now()
+          };
+          
+          await addDoc(collection(firestore, COLECAO_ATIVIDADES), atividadeParaSalvar);
+          console.log(`Atividade do Strava salva: ${atividadeStrava.stravaName}`);
+        } else {
+          console.log(`Atividade do Strava já existe: ${atividadeStrava.stravaName}`);
+        }
+      }
+    }
+    
+    console.log('Sincronização do Strava concluída');
+    return resultado;
+    
+  } catch (error) {
+    console.error('Erro ao sincronizar atividades do Strava:', error);
+    throw error;
+  }
+};
+
+/**
  * Obter estatísticas das atividades do usuário
  */
 export const obterEstatisticasUsuario = async () => {
@@ -285,5 +347,6 @@ export default {
   excluirAtividade,
   obterIconePorTipo,
   formatarAtividadeParaExibicao,
-  obterEstatisticasUsuario
+  obterEstatisticasUsuario,
+  sincronizarAtividadesDoStrava
 };

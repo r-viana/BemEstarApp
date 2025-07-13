@@ -16,6 +16,7 @@ import HistoricoDeAtividades from '../views/screens/HistoricoDeAtividades';
 import Configuracoes from '../views/screens/Configuracoes';
 import TelaFormularioDeAtividade from '../views/screens/TelaFormularioDeAtividade';
 import Estatisticas from '../views/screens/Estatisticas';
+import ConectarStrava from '../views/screens/ConectarStrava';
 
 // Criar o stack navigator
 const Stack = createNativeStackNavigator();
@@ -141,6 +142,18 @@ export default function Navegacao() {
           options={{
             headerShown: true,
             title: 'Configurações',
+            headerStyle: { backgroundColor: cores.primaria },
+            headerTintColor: cores.branco,
+            headerTitleStyle: { fontWeight: 'bold' }
+          }}
+        />
+
+        <Stack.Screen
+          name="ConectarStrava"
+          component={ConectarStrava}
+          options={{
+            headerShown: true,
+            title: 'Conectar Strava',
             headerStyle: { backgroundColor: cores.primaria },
             headerTintColor: cores.branco,
             headerTitleStyle: { fontWeight: 'bold' }

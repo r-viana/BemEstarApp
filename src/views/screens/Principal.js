@@ -258,6 +258,13 @@ const obterMensagemMotivacional = () => {
           </TouchableOpacity>
 
           <TouchableOpacity 
+            style={estilos.botaoMenu}
+            onPress={() => navigation.navigate('ConectarStrava')}
+          >
+            <Text style={estilos.textoBotaoMenu}>🔗 Conectar Strava</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
             style={estilos.botaoSair}
             onPress={fazerLogout}
           >

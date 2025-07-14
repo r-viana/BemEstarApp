@@ -1,5 +1,5 @@
-import { Linking } from 'react-native';
-import * as Linking from 'expo-linking';
+import * as ExpoLinking from 'expo-linking';
+import { Alert } from 'react-native';
 import { trocarCodigoPorToken } from '../services/StravaService';
 
 /**
@@ -13,7 +13,7 @@ export const configurarStravaCallback = (navigation) => {
     if (url.includes('strava-callback')) {
       try {
         // Extrair código de autorização da URL
-        const urlObj = Linking.parse(url);
+        const urlObj = ExpoLinking.parse(url);
         const codigo = urlObj.queryParams?.code;
         
         if (codigo) {
@@ -51,10 +51,10 @@ export const configurarStravaCallback = (navigation) => {
   };
 
   // Configurar listener para URLs
-  const subscription = Linking.addEventListener('url', handleUrl);
+  const subscription = ExpoLinking.addEventListener('url', handleUrl);
   
   // Verificar se o app foi aberto por uma URL
-  Linking.getInitialURL().then((url) => {
+  ExpoLinking.getInitialURL().then((url) => {
     if (url) {
       handleUrl({ url });
     }
@@ -63,34 +63,23 @@ export const configurarStravaCallback = (navigation) => {
   // Retornar função para remover listener
   return () => subscription?.remove();
 };
-
 /**
- * Configurar deep linking para o app
+ * Processar callback do Strava (para usar nos componentes)
  */
-export const configurarDeepLinking = (navigation) => {
-  // Configurar URL scheme
-  const url = Linking.useURL();
-  
-  if (url) {
-    console.log('App aberto via URL:', url);
+export const processarCallbackStrava = async (url, navigation) => {
+  if (url && url.includes('strava-callback')) {
+    const urlObj = ExpoLinking.parse(url);
+    const codigo = urlObj.queryParams?.code;
     
-    // Processar URL se for do Strava
-    if (url.includes('strava-callback')) {
-      const urlObj = Linking.parse(url);
-      const codigo = urlObj.queryParams?.code;
-      
-      if (codigo) {
-        console.log('Processando callback do Strava...');
-        
-        // Processar em background
-        trocarCodigoPorToken(codigo)
-          .then(() => {
-            console.log('Strava conectado com sucesso via deep link');
-          })
-          .catch((error) => {
-            console.error('Erro ao conectar Strava via deep link:', error);
-          });
+    if (codigo) {
+      try {
+        await trocarCodigoPorToken(codigo);
+        navigation.navigate('ConectarStrava');
+        Alert.alert('Sucesso!', 'Conta do Strava conectada com sucesso!');
+      } catch (error) {
+        Alert.alert('Erro', 'Não foi possível conectar com o Strava.');
       }
     }
   }
-}; 
+};
+

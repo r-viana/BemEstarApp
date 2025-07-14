@@ -5,14 +5,18 @@
 export const STRAVA_CONFIG = {
   // Substitua pelo seu Client ID do Strava
   // Para obter: https://developers.strava.com/ -> Create & Manage Your App
-  CLIENT_ID: '167998',
-  
+  //CLIENT_ID: '167998',
+  CLIENT_ID: '167642',
   // Substitua pelo seu Client Secret do Strava
   // Para obter: https://developers.strava.com/ -> Create & Manage Your App
-  CLIENT_SECRET: '2ccce0dd29516273405b287bc99acb44b067ee8b',
+  CLIENT_SECRET: 'c8b35e9ac400fe020dcb4aa4764f40e461848224',
   
   // URI de callback (deve corresponder ao configurado no Strava)
-  REDIRECT_URI: 'com.bemestarapp://strava-callback',
+REDIRECT_URI: 'exp://192.168.0.104:8081/--/strava-callback',
+
+
+
+
   
   // URLs da API do Strava
   AUTH_URL: 'https://www.strava.com/oauth/authorize',

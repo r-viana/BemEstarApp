@@ -236,6 +236,13 @@ const obterMensagemMotivacional = () => {
             <Text style={estilos.textoBotaoMenu}>📝 Histórico de Atividades</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={estilos.botaoMenu}
+            onPress={() => navigation.navigate('ConectarStrava')}
+          >
+            <Text style={estilos.textoBotaoMenu}>🚴‍♂️ Conectar com Strava</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={estilos.botaoMenu}
             onPress={() => navigation.navigate('Perfil')}
@@ -255,13 +262,6 @@ const obterMensagemMotivacional = () => {
             onPress={() => navigation.navigate('Estatisticas')}
           >
             <Text style={estilos.textoBotaoMenu}>📊 Estatísticas</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={estilos.botaoMenu}
-            onPress={() => navigation.navigate('ConectarStrava')}
-          >
-            <Text style={estilos.textoBotaoMenu}>🔗 Conectar Strava</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 

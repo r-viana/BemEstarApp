@@ -1,44 +1,144 @@
-// Configurações do Strava
-// IMPORTANTE: Substitua estas credenciais pelas suas próprias credenciais do Strava
-// Para obter credenciais: https://developers.strava.com/
+// src/config/StravaConfig.js
+// Configurações da API do Strava
 
 export const STRAVA_CONFIG = {
-  // Substitua pelo seu Client ID do Strava
-  // Para obter: https://developers.strava.com/ -> Create & Manage Your App
-  //CLIENT_ID: '167998',
+  // Suas credenciais do Strava (substitua pelos valores reais)
   CLIENT_ID: '167642',
-  // Substitua pelo seu Client Secret do Strava
-  // Para obter: https://developers.strava.com/ -> Create & Manage Your App
   CLIENT_SECRET: 'c8b35e9ac400fe020dcb4aa4764f40e461848224',
   
-  // URI de callback (deve corresponder ao configurado no Strava)
-REDIRECT_URI: 'exp://192.168.0.104:8081/--/strava-callback',
-
-
-
-
+  // Configurações de OAuth
+  REDIRECT_URI: 'https://bemestarapp.com',
+  RESPONSE_TYPE: 'code',
+  SCOPE: 'read,activity:read_all,profile:read_all',
   
-  // URLs da API do Strava
-  AUTH_URL: 'https://www.strava.com/oauth/authorize',
+  // URLs da API Strava
+  AUTHORIZATION_URL: 'https://www.strava.com/oauth/authorize',
   TOKEN_URL: 'https://www.strava.com/oauth/token',
-  API_BASE_URL: 'https://www.strava.com/api/v3'
+  API_BASE_URL: 'https://www.strava.com/api/v3',
+  
+  // Configurações de deep linking
+  SCHEME: 'com.bemestarapp',
+  CALLBACK_PATH: 'strava-callback',
+  
+  // Configurações de sincronização
+  MAX_ACTIVITIES_PER_SYNC: 50, // Máximo de atividades por sincronização
+  SYNC_DAYS_BACK: 30, // Quantos dias para trás buscar atividades
+  
+  // Timeouts
+  REQUEST_TIMEOUT: 30000, // 30 segundos
+  
+  // Storage keys para AsyncStorage
+  STORAGE_KEYS: {
+    ACCESS_TOKEN: '@strava_access_token',
+    REFRESH_TOKEN: '@strava_refresh_token',
+    TOKEN_EXPIRES_AT: '@strava_token_expires_at',
+    USER_INFO: '@strava_user_info',
+    LAST_SYNC: '@strava_last_sync',
+    CONNECTION_STATUS: '@strava_connected'
+  }
 };
 
-// ⚠️ TESTE SEM STRAVA: Se você não configurar as credenciais,
-// o app ainda funcionará normalmente, mas a integração com Strava não estará disponível.
+// URLs auxiliares para construir requisições
+export const buildAuthorizationUrl = () => {
+  const params = new URLSearchParams({
+    client_id: STRAVA_CONFIG.CLIENT_ID,
+    redirect_uri: STRAVA_CONFIG.REDIRECT_URI,
+    response_type: STRAVA_CONFIG.RESPONSE_TYPE,
+    scope: STRAVA_CONFIG.SCOPE,
+    approval_prompt: 'force' // Força reautorização
+  });
+  
+  return `${STRAVA_CONFIG.AUTHORIZATION_URL}?${params.toString()}`;
+};
 
-// Instruções para configurar o Strava:
-/*
-1. Acesse https://developers.strava.com/
-2. Faça login ou crie uma conta
-3. Clique em "Create & Manage Your App"
-4. Preencha os dados:
-   - Application Name: BemEstarApp
-   - Category: Fitness
-   - Website: https://bemestarapp.com (ou seu site)
-   - Authorization Callback Domain: com.bemestarapp
-5. Clique em "Create"
-6. Copie o Client ID e Client Secret
-7. Substitua os valores acima
-8. Em "Authorization Callback Domain", adicione: com.bemestarapp
-*/ 
+// Construir URL para troca de código por token
+export const buildTokenExchangeUrl = (authCode) => {
+  return {
+    url: STRAVA_CONFIG.TOKEN_URL,
+    data: {
+      client_id: STRAVA_CONFIG.CLIENT_ID,
+      client_secret: STRAVA_CONFIG.CLIENT_SECRET,
+      code: authCode,
+      grant_type: 'authorization_code'
+    }
+  };
+};
+
+// Construir URL para refresh token
+export const buildRefreshTokenUrl = (refreshToken) => {
+  return {
+    url: STRAVA_CONFIG.TOKEN_URL,
+    data: {
+      client_id: STRAVA_CONFIG.CLIENT_ID,
+      client_secret: STRAVA_CONFIG.CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    }
+  };
+};
+
+// Mapeamento de tipos de atividade Strava -> BemEstarApp
+export const ACTIVITY_TYPE_MAPPING = {
+  // Strava -> BemEstarApp
+  'Run': 'Caminhada & Corrida',
+  'Walk': 'Caminhada & Corrida',
+  'Hike': 'Caminhada & Corrida',
+  'Trail Run': 'Caminhada & Corrida',
+  'Virtual Run': 'Caminhada & Corrida',
+  
+  'Ride': 'Ciclismo',
+  'Virtual Ride': 'Ciclismo',
+  'Mountain Bike Ride': 'Ciclismo',
+  'Road Bike Ride': 'Ciclismo',
+  'E-Bike Ride': 'Ciclismo',
+  
+  'Swim': 'Natação',
+  'Pool Swim': 'Natação',
+  'Open Water Swim': 'Natação',
+  
+  'Weight Training': 'Musculação',
+  'Strength Training': 'Musculação',
+  'Crossfit': 'Funcional',
+  'HIIT': 'Funcional',
+  'Circuit Training': 'Funcional',
+  'Functional Fitness': 'Funcional',
+  'Workout': 'Funcional',
+  
+  'Yoga': 'Yoga',
+  'Pilates': 'Pilates',
+  'Stretching': 'Alongamento',
+  'Flexibility': 'Alongamento',
+  
+  'Dance': 'Dança',
+  'Zumba': 'Dança',
+  
+  'Meditation': 'Meditação',
+  'Mindfulness': 'Meditação',
+  
+  // Tipos que não temos mapeamento exato - usar Funcional como padrão
+  'Soccer': 'Funcional',
+  'Basketball': 'Funcional',
+  'Tennis': 'Funcional',
+  'Volleyball': 'Funcional',
+  'Rock Climbing': 'Funcional',
+  'Kayaking': 'Funcional',
+  'Rowing': 'Funcional',
+  'Surfing': 'Funcional',
+  'Skiing': 'Funcional',
+  'Snowboarding': 'Funcional'
+};
+
+// Função para mapear tipo de atividade
+export const mapStravaActivityType = (stravaType) => {
+  return ACTIVITY_TYPE_MAPPING[stravaType] || 'Funcional';
+};
+
+// Configurações de log (para debug)
+export const LOG_CONFIG = {
+  ENABLE_LOGS: __DEV__, // Só ativar logs em desenvolvimento
+  LOG_REQUESTS: true,
+  LOG_RESPONSES: true,
+  LOG_ERRORS: true
+};
+
+export default STRAVA_CONFIG;

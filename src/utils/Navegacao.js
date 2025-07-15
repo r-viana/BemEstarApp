@@ -148,17 +148,11 @@ export default function Navegacao() {
           }}
         />
 
-        <Stack.Screen
-          name="ConectarStrava"
-          component={ConectarStrava}
-          options={{
-            headerShown: true,
-            title: 'Conectar Strava',
-            headerStyle: { backgroundColor: cores.primaria },
-            headerTintColor: cores.branco,
-            headerTitleStyle: { fontWeight: 'bold' }
-          }}
-        />
+        <Stack.Screen 
+  name="ConectarStrava" 
+  component={ConectarStrava}
+  options={{ title: 'Conectar com Strava' }}
+/>
 
       </Stack.Navigator>
     </NavigationContainer>

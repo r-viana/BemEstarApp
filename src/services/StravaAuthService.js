@@ -1,6 +1,7 @@
+// src/services/StravaAuthService.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Alert } from 'react-native';
-import { STRAVA_CONFIG, STORAGE_KEYS } from './StravaConfig';
+import { STRAVA_CONFIG, buildAuthorizationUrl, buildTokenExchangeUrl, buildRefreshTokenUrl } from '../config/StravaConfig';
 
 /**
  * Serviço de autenticação com Strava
@@ -12,38 +13,38 @@ class StravaAuthService {
    */
   async isConnected() {
     try {
-      const isConnected = await AsyncStorage.getItem(STORAGE_KEYS.IS_CONNECTED);
-      const accessToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const accessToken = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
+      const isConnected = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.CONNECTION_STATUS);
       
       return isConnected === 'true' && !!accessToken;
     } catch (error) {
-      console.log('Erro ao verificar conexão Strava:', error);
+      console.log('❌ Erro ao verificar conexão Strava:', error);
       return false;
     }
   }
 
   /**
-   * Gerar URL de autorização do Strava
+   * Obter informações do usuário conectado
    */
-  generateAuthUrl() {
-    const params = new URLSearchParams({
-      client_id: STRAVA_CONFIG.CLIENT_ID,
-      redirect_uri: STRAVA_CONFIG.REDIRECT_URI,
-      response_type: 'code',
-      scope: STRAVA_CONFIG.SCOPE,
-      approval_prompt: 'auto'
-    });
-
-    return `${STRAVA_CONFIG.AUTHORIZE_URL}?${params.toString()}`;
+  async getUserInfo() {
+    try {
+      const userInfoString = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.USER_INFO);
+      return userInfoString ? JSON.parse(userInfoString) : null;
+    } catch (error) {
+      console.log('❌ Erro ao obter info do usuário:', error);
+      return null;
+    }
   }
 
   /**
    * Iniciar processo de autenticação
    */
-  async authenticate() {
+  async startAuth() {
     try {
-      const authUrl = this.generateAuthUrl();
-      console.log('Abrindo URL de autenticação:', authUrl);
+      console.log('🔗 Iniciando autenticação com Strava...');
+      
+      const authUrl = buildAuthorizationUrl();
+      console.log('📱 URL de autorização:', authUrl);
       
       // Verificar se pode abrir a URL
       const canOpen = await Linking.canOpenURL(authUrl);
@@ -55,7 +56,7 @@ class StravaAuthService {
         throw new Error('Não foi possível abrir o Strava');
       }
     } catch (error) {
-      console.log('Erro na autenticação:', error);
+      console.log('❌ Erro na autenticação:', error);
       return { 
         success: false, 
         error: error.message || 'Erro ao conectar com Strava' 
@@ -64,157 +65,214 @@ class StravaAuthService {
   }
 
   /**
+   * Processar callback de autorização
+   */
+  async handleAuthCallback(url) {
+    try {
+      console.log('🔄 Processando callback:', url);
+      
+      // Extrair código da URL
+      const code = this.extractCodeFromUrl(url);
+      
+      if (!code) {
+        throw new Error('Código de autorização não encontrado');
+      }
+
+      console.log('✅ Código extraído:', code);
+      
+      // Trocar código por tokens
+      const tokens = await this.exchangeCodeForTokens(code);
+      
+      if (tokens) {
+        await this.saveTokens(tokens);
+        await this.fetchAndSaveUserInfo();
+        
+        return { success: true, tokens };
+      } else {
+        throw new Error('Não foi possível obter tokens');
+      }
+      
+    } catch (error) {
+      console.log('❌ Erro no callback:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Extrair código de autorização da URL
+   */
+  extractCodeFromUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.searchParams.get('code');
+    } catch (error) {
+      // Fallback para parsing manual
+      const match = url.match(/code=([^&]+)/);
+      return match ? match[1] : null;
+    }
+  }
+
+  /**
    * Trocar código de autorização por tokens
    */
   async exchangeCodeForTokens(authCode) {
     try {
-      console.log('Trocando código por tokens:', authCode);
+      console.log('🔄 Trocando código por tokens...');
       
-      const response = await fetch(STRAVA_CONFIG.TOKEN_URL, {
+      const { url, data } = buildTokenExchangeUrl(authCode);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          client_id: STRAVA_CONFIG.CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET, // Por segurança
-          code: authCode,
-          grant_type: 'authorization_code'
-        })
+        body: JSON.stringify(data),
+        timeout: STRAVA_CONFIG.REQUEST_TIMEOUT
       });
 
       if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
+        const errorText = await response.text();
+        console.log('❌ Erro na resposta:', response.status, errorText);
+        throw new Error(`Erro na resposta do Strava: ${response.status}`);
       }
 
-      const tokenData = await response.json();
-      console.log('Tokens recebidos com sucesso');
+      const tokens = await response.json();
+      console.log('✅ Tokens obtidos com sucesso');
       
-      // Salvar tokens
-      await this.saveTokens(tokenData);
+      return tokens;
+    } catch (error) {
+      console.log('❌ Erro ao trocar código por tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Renovar token de acesso
+   */
+  async refreshToken() {
+    try {
+      console.log('🔄 Renovando token...');
       
-      return { success: true, data: tokenData };
+      const refreshToken = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+      
+      if (!refreshToken) {
+        throw new Error('Refresh token não encontrado');
+      }
+
+      const { url, data } = buildRefreshTokenUrl(refreshToken);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        timeout: STRAVA_CONFIG.REQUEST_TIMEOUT
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao renovar token: ${response.status}`);
+      }
+
+      const newTokens = await response.json();
+      await this.saveTokens(newTokens);
+      
+      console.log('✅ Token renovado com sucesso');
+      return newTokens;
       
     } catch (error) {
-      console.log('Erro ao trocar código por tokens:', error);
-      return { 
-        success: false, 
-        error: 'Não foi possível completar a autenticação' 
-      };
+      console.log('❌ Erro ao renovar token:', error);
+      // Se não conseguir renovar, desconectar
+      await this.disconnect();
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar se token é válido e renovar se necessário
+   */
+  async getValidToken() {
+    try {
+      const accessToken = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
+      const expiresAt = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.TOKEN_EXPIRES_AT);
+      
+      if (!accessToken || !expiresAt) {
+        throw new Error('Token não encontrado');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const tokenExpiresAt = parseInt(expiresAt);
+      
+      // Se token expira em menos de 5 minutos, renovar
+      if (tokenExpiresAt - now < 300) {
+        console.log('🔄 Token expirando em breve, renovando...');
+        const newTokens = await this.refreshToken();
+        return newTokens.access_token;
+      }
+      
+      return accessToken;
+    } catch (error) {
+      console.log('❌ Erro ao obter token válido:', error);
+      throw error;
     }
   }
 
   /**
    * Salvar tokens no AsyncStorage
    */
-  async saveTokens(tokenData) {
+  async saveTokens(tokens) {
     try {
-      const expiresAt = Date.now() + (tokenData.expires_in * 1000);
+      console.log('💾 Salvando tokens...');
       
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokenData.access_token),
-        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokenData.refresh_token),
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString()),
-        AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(tokenData.athlete)),
-        AsyncStorage.setItem(STORAGE_KEYS.IS_CONNECTED, 'true')
+      await AsyncStorage.multiSet([
+        [STRAVA_CONFIG.STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token],
+        [STRAVA_CONFIG.STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token],
+        [STRAVA_CONFIG.STORAGE_KEYS.TOKEN_EXPIRES_AT, tokens.expires_at.toString()],
+        [STRAVA_CONFIG.STORAGE_KEYS.CONNECTION_STATUS, 'true']
       ]);
       
-      console.log('Tokens salvos com sucesso');
+      console.log('✅ Tokens salvos com sucesso');
     } catch (error) {
-      console.log('Erro ao salvar tokens:', error);
+      console.log('❌ Erro ao salvar tokens:', error);
       throw error;
     }
   }
 
   /**
-   * Obter token válido (renovar se necessário)
+   * Buscar e salvar informações do usuário
    */
-  async getValidToken() {
+  async fetchAndSaveUserInfo() {
     try {
-      const accessToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const expiresAt = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+      console.log('👤 Buscando informações do atleta...');
       
-      if (!accessToken || !expiresAt) {
-        throw new Error('Tokens não encontrados');
-      }
-
-      // Verificar se token ainda é válido (margem de 5 minutos)
-      const now = Date.now();
-      const tokenExpiresAt = parseInt(expiresAt);
+      const token = await this.getValidToken();
       
-      if (now < (tokenExpiresAt - 5 * 60 * 1000)) {
-        return accessToken; // Token ainda válido
-      }
-      
-      // Token expirando, renovar
-      console.log('Token expirando, renovando...');
-      const renewResult = await this.renewToken();
-      
-      if (renewResult.success) {
-        return renewResult.accessToken;
-      } else {
-        throw new Error('Não foi possível renovar token');
-      }
-      
-    } catch (error) {
-      console.log('Erro ao obter token válido:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Renovar token usando refresh token
-   */
-  async renewToken() {
-    try {
-      const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-      
-      if (!refreshToken) {
-        throw new Error('Refresh token não encontrado');
-      }
-
-      const response = await fetch(STRAVA_CONFIG.TOKEN_URL, {
-        method: 'POST',
+      const response = await fetch(`${STRAVA_CONFIG.API_BASE_URL}/athlete`, {
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          client_id: STRAVA_CONFIG.CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET,
-          refresh_token: refreshToken,
-          grant_type: 'refresh_token'
-        })
+        timeout: STRAVA_CONFIG.REQUEST_TIMEOUT
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao renovar token');
+        throw new Error(`Erro ao buscar atleta: ${response.status}`);
       }
 
-      const tokenData = await response.json();
-      await this.saveTokens(tokenData);
+      const athlete = await response.json();
       
-      console.log('Token renovado com sucesso');
-      return { 
-        success: true, 
-        accessToken: tokenData.access_token 
-      };
+      // Salvar informações do usuário
+      await AsyncStorage.setItem(
+        STRAVA_CONFIG.STORAGE_KEYS.USER_INFO, 
+        JSON.stringify(athlete)
+      );
+      
+      console.log('✅ Informações do atleta salvas:', athlete.firstname, athlete.lastname);
+      return athlete;
       
     } catch (error) {
-      console.log('Erro ao renovar token:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Obter informações do usuário Strava
-   */
-  async getUserInfo() {
-    try {
-      const userInfo = await AsyncStorage.getItem(STORAGE_KEYS.USER_INFO);
-      return userInfo ? JSON.parse(userInfo) : null;
-    } catch (error) {
-      console.log('Erro ao obter info do usuário:', error);
-      return null;
+      console.log('❌ Erro ao buscar informações do atleta:', error);
+      throw error;
     }
   }
 
@@ -223,24 +281,41 @@ class StravaAuthService {
    */
   async disconnect() {
     try {
-      // Limpar todos os dados do Strava
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRES_AT),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER_INFO),
-        AsyncStorage.removeItem(STORAGE_KEYS.LAST_SYNC),
-        AsyncStorage.removeItem(STORAGE_KEYS.IS_CONNECTED)
-      ]);
+      console.log('🔌 Desconectando do Strava...');
       
-      console.log('Desconectado do Strava com sucesso');
+      // Remover todos os dados do AsyncStorage
+      const keysToRemove = Object.values(STRAVA_CONFIG.STORAGE_KEYS);
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      console.log('✅ Desconectado com sucesso');
       return { success: true };
       
     } catch (error) {
-      console.log('Erro ao desconectar do Strava:', error);
-      return { 
-        success: false, 
-        error: 'Erro ao desconectar' 
+      console.log('❌ Erro ao desconectar:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Obter estatísticas da conexão
+   */
+  async getConnectionStats() {
+    try {
+      const isConnected = await this.isConnected();
+      const userInfo = await this.getUserInfo();
+      const lastSync = await AsyncStorage.getItem(STRAVA_CONFIG.STORAGE_KEYS.LAST_SYNC);
+      
+      return {
+        isConnected,
+        userInfo,
+        lastSync: lastSync ? new Date(parseInt(lastSync)) : null
+      };
+    } catch (error) {
+      console.log('❌ Erro ao obter stats:', error);
+      return {
+        isConnected: false,
+        userInfo: null,
+        lastSync: null
       };
     }
   }

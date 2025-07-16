@@ -1,7 +1,10 @@
 {
   "expo": {
-    "scheme": "com.bemestarapp",
+    "name": "Bem Estar App",
+    "slug": "appbemestar",
+    "version": "1.0.0",
     "android": {
+      "package": "com.bemestarapp.appbemestar",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -16,6 +19,12 @@
           ]
         }
       ]
+    },
+    "scheme": "com.bemestarapp",
+    "extra": {
+      "eas": {
+        "projectId": "bfbc5a6a-04a7-4262-b2d0-dd01a2051dd6"
+      }
     }
   }
 }

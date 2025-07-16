@@ -1,0 +1,89 @@
+// android/build.gradle
+buildscript {
+    ext {
+        buildToolsVersion = "34.0.0"
+        minSdkVersion = 21
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        ndkVersion = "23.1.7779620"
+        
+        // Versões das bibliotecas
+        kotlinVersion = "1.8.10"
+        
+        // React Native versions
+        frescoVersion = "2.5.0"
+        flipperVersion = "0.125.0"
+        soLoaderVersion = "0.10.5"
+        okHttpVersion = "4.12.0"
+        okioVersion = "2.8.0"
+        
+        // Java version
+        javaVersion = JavaVersion.VERSION_17
+    }
+    
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+    
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.0.1")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        
+        // Firebase
+        classpath("com.google.gms:google-services:4.4.0")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+        
+        // React Native repositories
+        maven { url("https://reactnative.jfrog.io/artifactory/react-native/") }
+        maven { url("https://maven.facebook.com/nexus/content/repositories/releases/") }
+        
+        // Flipper
+        maven { url("https://oss.sonatype.org/content/repositories/snapshots/") }
+        
+        // Jitpack
+        maven { url("https://jitpack.io") }
+        
+        // Android Local Repository
+        flatDir {
+            dirs 'libs'
+        }
+    }
+    
+    // Forçar Java 17 para todos os projetos
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        
+        options.compilerArgs += [
+            "-Xlint:deprecation",
+            "-Xlint:unchecked"
+        ]
+    }
+    
+    // Kotlin compatibility
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+    
+    // Configurações globais
+    configurations.all {
+        resolutionStrategy {
+            force "com.facebook.soloader:soloader:${soLoaderVersion}"
+            force "com.squareup.okhttp3:okhttp:${okHttpVersion}"
+            force "com.squareup.okio:okio:${okioVersion}"
+            force "com.facebook.fresco:fresco:${frescoVersion}"
+        }
+    }
+}

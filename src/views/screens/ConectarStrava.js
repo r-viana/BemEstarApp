@@ -23,6 +23,62 @@ export default function ConectarStrava({ navigation }) {
     }, [])
   );
 
+  // Listener para deep linking
+  useEffect(() => {
+    const handleDeepLink = (url) => {
+      console.log('🔗 Deep link recebido na tela:', url);
+      
+      if (url.includes('strava') || url.includes('code=')) {
+        // Extrair código da URL
+        const match = url.match(/code=([^&]+)/);
+        if (match) {
+          const code = match[1];
+          console.log('✅ Código extraído:', code);
+          processarCodigoStrava(code);
+        }
+      }
+    };
+
+    // Listener para quando app está aberto
+    const linkingListener = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    // Verificar se app foi aberto via deep link
+    Linking.getInitialURL().then(url => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
+    return () => {
+      linkingListener?.remove();
+    };
+  }, []);
+
+  const processarCodigoStrava = async (code) => {
+    try {
+      setCarregando(true);
+      console.log('🔄 Processando código do Strava:', code);
+      
+      // Aqui vamos trocar o código por tokens (implementar depois)
+      // Por enquanto, vamos simular sucesso
+      
+      setConectado(true);
+      Alert.alert(
+        'Sucesso!', 
+        'Conectado ao Strava com sucesso! Código capturado automaticamente.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.log('❌ Erro ao processar código:', error);
+      Alert.alert('Erro', 'Não foi possível processar a autorização do Strava');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   const verificarConexaoExistente = async () => {
     try {
       // Por enquanto, vamos simular a verificação

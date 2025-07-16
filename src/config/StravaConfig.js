@@ -7,7 +7,7 @@ export const STRAVA_CONFIG = {
   CLIENT_SECRET: 'c8b35e9ac400fe020dcb4aa4764f40e461848224',
   
   // Configurações de OAuth
-  REDIRECT_URI: 'https://bemestarapp.com',
+  REDIRECT_URI: 'https://r-viana.github.io/strava-callback/',
   RESPONSE_TYPE: 'code',
   SCOPE: 'read,activity:read_all,profile:read_all',
   
